@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < 12; i++)
 	{
 		sfTexture_setSmooth(texPieces[i], sfTrue);
+		sfTexture_generateMipmap(texPieces[i]);
 	}
 
 	// Create piece sprite. This will be reused for each piece drawing

@@ -11,8 +11,11 @@
 #define SQUARE_SIZE 45.0f
 
 // Define global variables
-sfRectangleShape *boardSquares[64];
 sfRenderWindow *window;
+
+sfRectangleShape *boardSquares[64];
+sfColor boardBlackColor;
+sfColor boardWhiteColor;
 
 sfTexture *texWKing;
 sfTexture *texWQueen;
@@ -59,8 +62,19 @@ int main(int argc, char *argv[])
 	texPieces[10] = texBBishop = sfTexture_createFromFile("img/bB.png", NULL);
 	texPieces[11] = texBPawn   = sfTexture_createFromFile("img/bP.png", NULL);
 
+	// Set texture scaling
+	for (int i = 0; i < 12; i++)
+	{
+		sfTexture_setSmooth(texPieces[i], sfTrue);
+	}
+
+	// Create piece sprite. This will be reused for each piece drawing
 	sprPiece = sfSprite_create();
 	sfSprite_setScale(sprPiece, (sfVector2f) {SQUARE_SIZE / 240.0f, SQUARE_SIZE / 240.0f });
+
+	// Define board colors
+	boardBlackColor = sfColor_fromRGB(151, 124, 179);
+	boardWhiteColor = sfColor_fromRGB(227, 216, 238);
 
 	// Create board
 	for (int i = 0; i < 64; i++)
@@ -71,7 +85,7 @@ int main(int argc, char *argv[])
 		sfRectangleShape_setPosition(s, (sfVector2f) {(float) (i % 8) * SQUARE_SIZE, floor(i / 8) * SQUARE_SIZE});
 
 		int isBlack = !((i + (int) floor(i / 8)) % 2); 	// For now. Will fix this
-		sfRectangleShape_setFillColor(s, isBlack ? sfGreen : sfBlue);
+		sfRectangleShape_setFillColor(s, isBlack ? boardBlackColor : boardWhiteColor);
 
 		boardSquares[i] = s;
 	}
@@ -103,7 +117,39 @@ int main(int argc, char *argv[])
 			sfRenderWindow_drawRectangleShape(window, boardSquares[i], NULL);
 
 		// Draw pieces
-		drawPiece(texWKing, 5, 2);
+		drawPiece(texWPawn,   1, 2);
+		drawPiece(texWPawn,   2, 2);
+		drawPiece(texWPawn,   3, 2);
+		drawPiece(texWPawn,   4, 2);
+		drawPiece(texWPawn,   5, 4);
+		drawPiece(texWPawn,   6, 2);
+		drawPiece(texWPawn,   7, 2);
+		drawPiece(texWPawn,   8, 2);
+		drawPiece(texWRook,   1, 1);
+		drawPiece(texWKnight, 2, 1);
+		drawPiece(texWBishop, 3, 1);
+		drawPiece(texWQueen,  6, 7);
+		drawPiece(texWKing,   5, 2); 	// Ke2 PogChamp
+		drawPiece(texWBishop, 3, 4);
+		drawPiece(texWKnight, 7, 1);
+		drawPiece(texWRook,   8, 1);
+
+		drawPiece(texBPawn,   1, 7);
+		drawPiece(texBPawn,   2, 7);
+		drawPiece(texBPawn,   3, 7);
+		drawPiece(texBPawn,   4, 7);
+		drawPiece(texBPawn,   5, 5);
+		//drawPiece(texBPawn,   6, 7);
+		drawPiece(texBPawn,   7, 7);
+		drawPiece(texBPawn,   8, 7);
+		drawPiece(texBRook,   1, 8);
+		drawPiece(texBKnight, 3, 6);
+		drawPiece(texBBishop, 3, 8);
+		drawPiece(texBQueen,  4, 8);
+		drawPiece(texBKing,   5, 8);
+		drawPiece(texBBishop, 6, 8);
+		drawPiece(texBKnight, 6, 6);
+		drawPiece(texBRook,   8, 8);
 
 		sfRenderWindow_display(window);
 	}

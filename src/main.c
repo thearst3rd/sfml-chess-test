@@ -38,7 +38,8 @@ sfSprite *sprPiece;
 int main(int argc, char *argv[])
 {
 	// Create the window
-	window = sfRenderWindow_create((sfVideoMode) {800, 600, 32}, "SFML Chess Board", sfResize | sfClose, NULL);
+	sfVideoMode mode = {720, 720, 32};
+	window = sfRenderWindow_create(mode, "SFML Chess Board", sfResize | sfClose, NULL);
 	if (!window)
 	{
 		fprintf(stderr, "ERROR: Unable to create SFML window");
@@ -91,7 +92,7 @@ int main(int argc, char *argv[])
 		boardSquares[i] = s;
 	}
 
-	calcView(800.0f, 600.0f);
+	calcView((float) mode.width, (float) mode.height);
 
 	// Main loop
 	while (sfRenderWindow_isOpen(window))
@@ -194,7 +195,7 @@ void calcView(float width, float height)
 
 void drawPiece(sfTexture *tex, int file, int rank)
 {
-	sfSprite_setTexture(sprPiece, tex, NULL);
+	sfSprite_setTexture(sprPiece, tex, sfFalse);
 	sfSprite_setPosition(sprPiece, (sfVector2f) {(file - 1) * SQUARE_SIZE, (8 - rank) * SQUARE_SIZE});
 	sfRenderWindow_drawSprite(window, sprPiece, NULL);
 }

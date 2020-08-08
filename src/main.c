@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 			{
 				sfTexture *tex = getPieceTex(p);
 
-				sfVector2f coords = sfRenderWindow_mapPixelToCoords(window, sfMouse_getPosition(window), NULL);
+				sfVector2f coords = sfRenderWindow_mapPixelToCoords(window, sfMouse_getPosition((sfWindow *) window), NULL);
 				coords.x -= SQUARE_SIZE / 2.0f;
 				coords.y -= SQUARE_SIZE / 2.0f;
 

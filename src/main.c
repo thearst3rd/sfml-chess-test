@@ -10,7 +10,7 @@
 
 #define SQUARE_SIZE 45.0f
 
-// Define global variables
+// Define resources
 sfRenderWindow *window;
 
 sfRectangleShape *boardSquares[64];
@@ -34,6 +34,14 @@ sfTexture *texBPawn;
 sfTexture *texPieces[12];
 
 sfSprite *sprPiece;
+
+// Define global variables
+int isDragging = 0;
+int draggingFile;
+int draggingRank;
+
+piece board[8][8] = {pEmpty};
+
 
 int main(int argc, char *argv[])
 {
@@ -72,13 +80,13 @@ int main(int argc, char *argv[])
 
 	// Create piece sprite. This will be reused for each piece drawing
 	sprPiece = sfSprite_create();
-	sfSprite_setScale(sprPiece, (sfVector2f) {SQUARE_SIZE / 240.0f, SQUARE_SIZE / 240.0f });
+	sfSprite_setScale(sprPiece, (sfVector2f) {SQUARE_SIZE / 240.0f, SQUARE_SIZE / 240.0f});
 
 	// Define board colors
 	boardBlackColor = sfColor_fromRGB(151, 124, 179);
 	boardWhiteColor = sfColor_fromRGB(227, 216, 238);
 
-	// Create board
+	// Create board squares
 	for (int i = 0; i < 64; i++)
 	{
 		sfRectangleShape *s = sfRectangleShape_create();
@@ -86,13 +94,28 @@ int main(int argc, char *argv[])
 		sfRectangleShape_setSize(s, (sfVector2f) {SQUARE_SIZE, SQUARE_SIZE});
 		sfRectangleShape_setPosition(s, (sfVector2f) {(float) (i % 8) * SQUARE_SIZE, floor(i / 8) * SQUARE_SIZE});
 
-		int isBlack = !((i + (int) floor(i / 8)) % 2); 	// For now. Will fix this
+		int isBlack = !((i + (int) floor(i / 8)) % 2);
 		sfRectangleShape_setFillColor(s, isBlack ? boardBlackColor : boardWhiteColor);
 
 		boardSquares[i] = s;
 	}
 
 	calcView((float) mode.width, (float) mode.height);
+
+	// Create chess board
+	for (int i = 1; i <= 8; i++)
+	{
+		setPiece(i, 2, pWPawn);
+		setPiece(i, 7, pBPawn);
+	}
+	setPiece(1, 1, pWRook);   setPiece(1, 8, pBRook);
+	setPiece(2, 1, pWKnight); setPiece(2, 8, pBKnight);
+	setPiece(3, 1, pWBishop); setPiece(3, 8, pBBishop);
+	setPiece(4, 1, pWQueen);  setPiece(4, 8, pBQueen);
+	setPiece(5, 1, pWKing);   setPiece(5, 8, pBKing);
+	setPiece(6, 1, pWBishop); setPiece(6, 8, pBBishop);
+	setPiece(7, 1, pWKnight); setPiece(7, 8, pBKnight);
+	setPiece(8, 1, pWRook);   setPiece(8, 8, pBRook);
 
 	// Main loop
 	while (sfRenderWindow_isOpen(window))
@@ -109,6 +132,30 @@ int main(int argc, char *argv[])
 			{
 				calcView((float) event.size.width, (float) event.size.height);
 			}
+			else if (event.type == sfEvtMouseButtonPressed)
+			{
+				if (event.mouseButton.button == sfMouseLeft)
+				{
+					int file, rank;
+					if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
+					{
+						isDragging = 1;
+						draggingFile = file;
+						draggingRank = rank;
+					}
+				}
+			}
+			else if (event.type == sfEvtMouseButtonReleased)
+			{
+				if (event.mouseButton.button == sfMouseLeft)
+				{
+					if (isDragging)
+					{
+						isDragging = 0;
+						// TODO - move piece
+					}
+				}
+			}
 		}
 
 		// Draw to window
@@ -116,42 +163,34 @@ int main(int argc, char *argv[])
 
 		// Draw the board
 		for (int i = 0; i < 64; i++)
+		{
+			int file = (i % 8) + 1;
+			int rank = 8 - floor(i / 8);
+
 			sfRenderWindow_drawRectangleShape(window, boardSquares[i], NULL);
 
-		// Draw pieces
-		drawPiece(texWPawn,   1, 2);
-		drawPiece(texWPawn,   2, 2);
-		drawPiece(texWPawn,   3, 2);
-		drawPiece(texWPawn,   4, 2);
-		drawPiece(texWPawn,   5, 4);
-		drawPiece(texWPawn,   6, 2);
-		drawPiece(texWPawn,   7, 2);
-		drawPiece(texWPawn,   8, 2);
-		drawPiece(texWRook,   1, 1);
-		drawPiece(texWKnight, 2, 1);
-		drawPiece(texWBishop, 3, 1);
-		drawPiece(texWQueen,  6, 7);
-		drawPiece(texWKing,   5, 2); 	// Ke2 PogChamp
-		drawPiece(texWBishop, 3, 4);
-		drawPiece(texWKnight, 7, 1);
-		drawPiece(texWRook,   8, 1);
+			piece p = getPiece(file, rank);
+			if (p)
+				drawPiece(p, file, rank);
+		}
 
-		drawPiece(texBPawn,   1, 7);
-		drawPiece(texBPawn,   2, 7);
-		drawPiece(texBPawn,   3, 7);
-		drawPiece(texBPawn,   4, 7);
-		drawPiece(texBPawn,   5, 5);
-		//drawPiece(texBPawn,   6, 7);
-		drawPiece(texBPawn,   7, 7);
-		drawPiece(texBPawn,   8, 7);
-		drawPiece(texBRook,   1, 8);
-		drawPiece(texBKnight, 3, 6);
-		drawPiece(texBBishop, 3, 8);
-		drawPiece(texBQueen,  4, 8);
-		drawPiece(texBKing,   5, 8);
-		drawPiece(texBBishop, 6, 8);
-		drawPiece(texBKnight, 6, 6);
-		drawPiece(texBRook,   8, 8);
+		// Draw currently dragged piece
+		if (isDragging)
+		{
+			piece p = getPiece(draggingFile, draggingRank);
+			if (p)
+			{
+				sfTexture *tex = getPieceTex(p);
+
+				sfVector2f coords = sfRenderWindow_mapPixelToCoords(window, sfMouse_getPosition(window), NULL);
+				coords.x -= SQUARE_SIZE / 2.0f;
+				coords.y -= SQUARE_SIZE / 2.0f;
+
+				sfSprite_setTexture(sprPiece, tex, sfFalse);
+				sfSprite_setPosition(sprPiece, coords);
+				sfRenderWindow_drawSprite(window, sprPiece, NULL);
+			}
+		}
 
 		sfRenderWindow_display(window);
 	}
@@ -193,9 +232,74 @@ void calcView(float width, float height)
 	sfView_destroy(newView);
 }
 
-void drawPiece(sfTexture *tex, int file, int rank)
+void drawPiece(piece p, int file, int rank)
 {
+	if (isDragging && draggingFile == file && draggingRank == rank)
+		return;
+
+	sfTexture *tex = getPieceTex(p);
+
 	sfSprite_setTexture(sprPiece, tex, sfFalse);
 	sfSprite_setPosition(sprPiece, (sfVector2f) {(file - 1) * SQUARE_SIZE, (8 - rank) * SQUARE_SIZE});
 	sfRenderWindow_drawSprite(window, sprPiece, NULL);
+}
+
+sfTexture *getPieceTex(piece p)
+{
+	switch (p)
+	{
+		case pWPawn:
+			return texWPawn;
+		case pWBishop:
+			return texWBishop;
+		case pWKnight:
+			return texWKnight;
+		case pWRook:
+			return texWRook;
+		case pWQueen:
+			return texWQueen;
+		case pWKing:
+			return texWKing;
+		case pBPawn:
+			return texBPawn;
+		case pBBishop:
+			return texBBishop;
+		case pBKnight:
+			return texBKnight;
+		case pBRook:
+			return texBRook;
+		case pBQueen:
+			return texBQueen;
+		case pBKing:
+			return texBKing;
+		default:
+			return NULL;
+	}
+}
+
+piece getPiece(int file, int rank)
+{
+	return board[file - 1][rank - 1];
+}
+
+void setPiece(int file, int rank, piece p)
+{
+	board[file - 1][rank - 1] = p;
+}
+
+// This sets the values at the pointers to the correct file and rank.
+// Returns true if position is inside board, false otherwise
+int getMouseSquare(int mouseX, int mouseY, int *file, int *rank)
+{
+	sfVector2f coords = sfRenderWindow_mapPixelToCoords(window, (sfVector2i) {mouseX, mouseY}, NULL);
+	coords.x /= SQUARE_SIZE;
+	coords.y /= SQUARE_SIZE;
+
+	if (coords.x < 0 || coords.x >= 8 || coords.y < 0 || coords.y >= 8)
+		return 0;
+
+	*file = 1 + (int) floor(coords.x);
+	*rank = 8 - (int) floor(coords.y);
+
+	return 1;
 }

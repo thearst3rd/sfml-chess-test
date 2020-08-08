@@ -139,9 +139,14 @@ int main(int argc, char *argv[])
 					int file, rank;
 					if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 					{
-						isDragging = 1;
-						draggingFile = file;
-						draggingRank = rank;
+						piece p = getPiece(file, rank);
+
+						if (p)
+						{
+							isDragging = 1;
+							draggingFile = file;
+							draggingRank = rank;
+						}
 					}
 				}
 			}
@@ -152,7 +157,16 @@ int main(int argc, char *argv[])
 					if (isDragging)
 					{
 						isDragging = 0;
-						// TODO - move piece
+
+						int file, rank;
+						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
+						{
+							if (file != draggingFile || rank != draggingRank)
+							{
+								setPiece(file, rank, getPiece(draggingFile, draggingRank));
+								setPiece(draggingFile, draggingRank, pEmpty);
+							}
+						}
 					}
 				}
 			}

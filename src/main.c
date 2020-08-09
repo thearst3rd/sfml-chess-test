@@ -80,7 +80,9 @@ int main(int argc, char *argv[])
 
 	// Create piece sprite. This will be reused for each piece drawing
 	sprPiece = sfSprite_create();
-	sfSprite_setScale(sprPiece, (sfVector2f) {SQUARE_SIZE / 240.0f, SQUARE_SIZE / 240.0f});
+	float size = (float) sfTexture_getSize(texWPawn).x; 	// Assumes square pieces, all the same size
+	sfSprite_setScale(sprPiece, (sfVector2f) {SQUARE_SIZE / size, SQUARE_SIZE / size});
+	sfSprite_setOrigin(sprPiece, (sfVector2f) {size / 2.0f, size / 2.0f});
 
 	// Define board colors
 	boardBlackColor = sfColor_fromRGB(151, 124, 179);
@@ -197,8 +199,6 @@ int main(int argc, char *argv[])
 				sfTexture *tex = getPieceTex(p);
 
 				sfVector2f coords = sfRenderWindow_mapPixelToCoords(window, sfMouse_getPosition((sfWindow *) window), NULL);
-				coords.x -= SQUARE_SIZE / 2.0f;
-				coords.y -= SQUARE_SIZE / 2.0f;
 
 				sfSprite_setTexture(sprPiece, tex, sfFalse);
 				sfSprite_setPosition(sprPiece, coords);
@@ -254,7 +254,7 @@ void drawPiece(piece p, int file, int rank)
 	sfTexture *tex = getPieceTex(p);
 
 	sfSprite_setTexture(sprPiece, tex, sfFalse);
-	sfSprite_setPosition(sprPiece, (sfVector2f) {(file - 1) * SQUARE_SIZE, (8 - rank) * SQUARE_SIZE});
+	sfSprite_setPosition(sprPiece, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
 	sfRenderWindow_drawSprite(window, sprPiece, NULL);
 }
 

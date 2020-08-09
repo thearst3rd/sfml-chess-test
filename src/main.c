@@ -218,6 +218,8 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < 12; i++)
 		sfTexture_destroy(texPieces[i]);
 
+	sfSprite_destroy(sprPiece);
+
 	return 0;
 }
 

@@ -25,11 +25,11 @@ sfml-app: $(EXE)
 $(ALLOBJECTS): src/%.o : src/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(EXE): build $(OBJECTS)
+$(EXE): $(OBJECTS) | bin
 	$(CC) $(CFLAGS) -o $(EXE) $(OBJECTS) $(LIBS)
 
 
-build:
+bin:
 	@mkdir -p bin
 
 clean:

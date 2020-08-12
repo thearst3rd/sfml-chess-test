@@ -104,20 +104,7 @@ int main(int argc, char *argv[])
 
 	calcView((float) mode.width, (float) mode.height);
 
-	// Create chess board
-	for (int i = 1; i <= 8; i++)
-	{
-		setPiece(i, 2, pWPawn);
-		setPiece(i, 7, pBPawn);
-	}
-	setPiece(1, 1, pWRook);   setPiece(1, 8, pBRook);
-	setPiece(2, 1, pWKnight); setPiece(2, 8, pBKnight);
-	setPiece(3, 1, pWBishop); setPiece(3, 8, pBBishop);
-	setPiece(4, 1, pWQueen);  setPiece(4, 8, pBQueen);
-	setPiece(5, 1, pWKing);   setPiece(5, 8, pBKing);
-	setPiece(6, 1, pWBishop); setPiece(6, 8, pBBishop);
-	setPiece(7, 1, pWKnight); setPiece(7, 8, pBKnight);
-	setPiece(8, 1, pWRook);   setPiece(8, 8, pBRook);
+	initChessBoard();
 
 	// Main loop
 	while (sfRenderWindow_isOpen(window))
@@ -170,6 +157,14 @@ int main(int argc, char *argv[])
 							}
 						}
 					}
+				}
+			}
+			else if (event.type == sfEvtKeyPressed)
+			{
+				if (!isDragging)
+				{
+					// TODO - only respond to certain keys
+					initChessBoard();
 				}
 			}
 		}
@@ -318,4 +313,27 @@ int getMouseSquare(int mouseX, int mouseY, int *file, int *rank)
 	*rank = 8 - (int) floor(coords.y);
 
 	return 1;
+}
+
+void initChessBoard()
+{
+	for (int i = 1; i <= 8; i++)
+	{
+		setPiece(i, 2, pWPawn);
+		setPiece(i, 7, pBPawn);
+	}
+	setPiece(1, 1, pWRook);   setPiece(1, 8, pBRook);
+	setPiece(2, 1, pWKnight); setPiece(2, 8, pBKnight);
+	setPiece(3, 1, pWBishop); setPiece(3, 8, pBBishop);
+	setPiece(4, 1, pWQueen);  setPiece(4, 8, pBQueen);
+	setPiece(5, 1, pWKing);   setPiece(5, 8, pBKing);
+	setPiece(6, 1, pWBishop); setPiece(6, 8, pBBishop);
+	setPiece(7, 1, pWKnight); setPiece(7, 8, pBKnight);
+	setPiece(8, 1, pWRook);   setPiece(8, 8, pBRook);
+
+	for (int i = 3; i <= 6; i++)
+	{
+		for (int j = 1; j <= 8; j++)
+			setPiece(j, i, pEmpty);
+	}
 }

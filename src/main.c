@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 		sfRectangleShape_setSize(s, (sfVector2f) {SQUARE_SIZE, SQUARE_SIZE});
 		sfRectangleShape_setPosition(s, (sfVector2f) {(float) (i % 8) * SQUARE_SIZE, floor(i / 8) * SQUARE_SIZE});
 
-		int isBlack = !((i + (int) floor(i / 8)) % 2);
+		int isBlack = (i + (int) floor(i / 8)) % 2;
 		sfRectangleShape_setFillColor(s, isBlack ? boardBlackColor : boardWhiteColor);
 
 		boardSquares[i] = s;

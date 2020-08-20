@@ -16,6 +16,13 @@ sfRenderWindow *window;
 sfRectangleShape *boardSquares[64];
 sfColor boardBlackColor;
 sfColor boardWhiteColor;
+sfColor boardHighlightColor;
+
+sfRectangleShape *highlightSquare;
+int highlight1File;
+int highlight1Rank;
+int highlight2File;
+int highlight2Rank;
 
 sfTexture *texWKing;
 sfTexture *texWQueen;
@@ -85,8 +92,9 @@ int main(int argc, char *argv[])
 	sfSprite_setOrigin(sprPiece, (sfVector2f) {size / 2.0f, size / 2.0f});
 
 	// Define board colors
-	boardBlackColor = sfColor_fromRGB(151, 124, 179);
-	boardWhiteColor = sfColor_fromRGB(227, 216, 238);
+	boardBlackColor = sfColor_fromRGB(167, 92, 185);
+	boardWhiteColor = sfColor_fromRGB(228, 190, 237);
+	boardHighlightColor = sfColor_fromRGBA(255, 255, 0, 100);
 
 	// Create board squares
 	for (int i = 0; i < 64; i++)
@@ -101,6 +109,12 @@ int main(int argc, char *argv[])
 
 		boardSquares[i] = s;
 	}
+
+	// Create highlight square
+	highlightSquare = sfRectangleShape_create();
+
+	sfRectangleShape_setSize(highlightSquare, (sfVector2f) {SQUARE_SIZE, SQUARE_SIZE});
+	sfRectangleShape_setFillColor(highlightSquare, boardHighlightColor);
 
 	calcView((float) mode.width, (float) mode.height);
 
@@ -154,6 +168,11 @@ int main(int argc, char *argv[])
 							{
 								setPiece(file, rank, getPiece(draggingFile, draggingRank));
 								setPiece(draggingFile, draggingRank, pEmpty);
+
+								highlight1File = draggingFile;
+								highlight1Rank = draggingRank;
+								highlight2File = file;
+								highlight2Rank = rank;
 							}
 						}
 					}
@@ -179,6 +198,12 @@ int main(int argc, char *argv[])
 			int rank = 8 - floor(i / 8);
 
 			sfRenderWindow_drawRectangleShape(window, boardSquares[i], NULL);
+
+			if ((file == highlight1File && rank == highlight1Rank) || (file == highlight2File && rank == highlight2Rank))
+			{
+				sfRectangleShape_setPosition(highlightSquare, sfRectangleShape_getPosition(boardSquares[i]));
+				sfRenderWindow_drawRectangleShape(window, highlightSquare, NULL);
+			}
 
 			piece p = getPiece(file, rank);
 			if (p)
@@ -336,4 +361,9 @@ void initChessBoard()
 		for (int j = 1; j <= 8; j++)
 			setPiece(j, i, pEmpty);
 	}
+
+	highlight1File = 0;
+	highlight1Rank = 0;
+	highlight2File = 0;
+	highlight2Rank = 0;
 }

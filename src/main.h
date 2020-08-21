@@ -5,7 +5,7 @@
 
 #include <SFML/Graphics.h>
 
-#define INITIAL_POSITION "rnbqkbnr/pppppppp/8/8/8/8/8/RNBQKBNR"
+#define INITIAL_POSITION "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 
 typedef enum
 {

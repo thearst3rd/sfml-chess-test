@@ -4,6 +4,7 @@
  */
 
 #include <stdio.h>
+#include <ctype.h>
 #include <math.h>
 
 #include "main.h"
@@ -92,8 +93,8 @@ int main(int argc, char *argv[])
 	sfSprite_setOrigin(sprPiece, (sfVector2f) {size / 2.0f, size / 2.0f});
 
 	// Define board colors
-	boardBlackColor = sfColor_fromRGB(167, 92, 185);
-	boardWhiteColor = sfColor_fromRGB(228, 190, 237);
+	boardBlackColor = sfColor_fromRGB(167, 129, 177);
+	boardWhiteColor = sfColor_fromRGB(234, 223, 237);
 	boardHighlightColor = sfColor_fromRGBA(255, 255, 0, 100);
 
 	// Create board squares
@@ -118,7 +119,7 @@ int main(int argc, char *argv[])
 
 	calcView((float) mode.width, (float) mode.height);
 
-	initChessBoard();
+	initChessBoard(INITIAL_POSITION);
 
 	// Main loop
 	while (sfRenderWindow_isOpen(window))
@@ -183,7 +184,7 @@ int main(int argc, char *argv[])
 				if (!isDragging)
 				{
 					// TODO - only respond to certain keys
-					initChessBoard();
+					initChessBoard(INITIAL_POSITION);
 				}
 			}
 		}
@@ -340,30 +341,94 @@ int getMouseSquare(int mouseX, int mouseY, int *file, int *rank)
 	return 1;
 }
 
-void initChessBoard()
+void initChessBoard(char *fen)
 {
-	for (int i = 1; i <= 8; i++)
-	{
-		setPiece(i, 2, pWPawn);
-		setPiece(i, 7, pBPawn);
-	}
-	setPiece(1, 1, pWRook);   setPiece(1, 8, pBRook);
-	setPiece(2, 1, pWKnight); setPiece(2, 8, pBKnight);
-	setPiece(3, 1, pWBishop); setPiece(3, 8, pBBishop);
-	setPiece(4, 1, pWQueen);  setPiece(4, 8, pBQueen);
-	setPiece(5, 1, pWKing);   setPiece(5, 8, pBKing);
-	setPiece(6, 1, pWBishop); setPiece(6, 8, pBBishop);
-	setPiece(7, 1, pWKnight); setPiece(7, 8, pBKnight);
-	setPiece(8, 1, pWRook);   setPiece(8, 8, pBRook);
-
-	for (int i = 3; i <= 6; i++)
-	{
-		for (int j = 1; j <= 8; j++)
-			setPiece(j, i, pEmpty);
-	}
-
 	highlight1File = 0;
 	highlight1Rank = 0;
 	highlight2File = 0;
 	highlight2Rank = 0;
+
+	// Parse FEN
+	int file = 1;
+	int rank = 8;
+
+	char c;
+
+	while ((c = *fen))
+	{
+		if (c == ' ')
+		{
+			break;
+		}
+		else if (c >= '1' && c <= '8')
+		{
+			file += c - '0';
+			if (file > 9)
+			{
+				fprintf(stderr, "ERROR IN FEN: Spacer put file over the end\n");
+				return;
+			}
+		}
+		else if (c == '/')
+		{
+			if (file != 9)
+			{
+				fprintf(stderr, "ERROR IN FEN: Found '/' at wrong position in rank\n");
+				return;
+			}
+			if (rank <= 1)
+			{
+				fprintf(stderr, "ERROR IN FEN: Found '/' after the last rank\n");
+				return;
+			}
+			file = 1;
+			rank--;
+		}
+		else
+		{
+			if (file > 8)
+			{
+				fprintf(stderr, "ERROR IN FEN: Found character '%c' after the end of a rank\n", c);
+				return;
+			}
+
+			char lc = tolower(c);
+			int isBlack = islower(c);
+
+			switch (lc)
+			{
+				case 'p':
+					setPiece(file, rank, isBlack ? pBPawn : pWPawn);
+					break;
+
+				case 'b':
+					setPiece(file, rank, isBlack ? pBBishop : pWBishop);
+					break;
+
+				case 'n':
+					setPiece(file, rank, isBlack ? pBKnight : pWKnight);
+					break;
+
+				case 'r':
+					setPiece(file, rank, isBlack ? pBRook : pWRook);
+					break;
+
+				case 'q':
+					setPiece(file, rank, isBlack ? pBQueen : pWQueen);
+					break;
+
+				case 'k':
+					setPiece(file, rank, isBlack ? pBKing : pWKing);
+					break;
+
+				default:
+					fprintf(stderr, "ERROR IN FEN: Unknown character '%c'\n", c);
+					return;
+			}
+
+			file++;
+		}
+
+		fen++;
+	}
 }

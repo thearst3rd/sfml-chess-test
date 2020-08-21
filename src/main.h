@@ -5,6 +5,8 @@
 
 #include <SFML/Graphics.h>
 
+#define INITIAL_POSITION "rnbqkbnr/pppppppp/8/8/8/8/8/RNBQKBNR"
+
 typedef enum
 {
 	pEmpty,

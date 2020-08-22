@@ -47,6 +47,7 @@ sfSprite *sprPiece;
 int isDragging = 0;
 int draggingFile;
 int draggingRank;
+int isFlipped = 0;
 
 piece board[8][8] = {pEmpty};
 
@@ -186,10 +187,19 @@ int main(int argc, char *argv[])
 			}
 			else if (event.type == sfEvtKeyPressed)
 			{
-				if (!isDragging)
+				switch (event.key.code)
 				{
-					// TODO - only respond to certain keys
-					initChessBoard(INITIAL_POSITION);
+					case sfKeyR:
+						if (!isDragging)
+							initChessBoard(INITIAL_POSITION);
+						break;
+
+					case sfKeyF:
+						isFlipped = !isFlipped;
+						break;
+
+					default:
+						break;
 				}
 			}
 		}
@@ -203,11 +213,13 @@ int main(int argc, char *argv[])
 			int file = (i % 8) + 1;
 			int rank = 8 - floor(i / 8);
 
-			sfRenderWindow_drawRectangleShape(window, boardSquares[i], NULL);
+			int index = isFlipped ? 63 - i : i;
+
+			sfRenderWindow_drawRectangleShape(window, boardSquares[index], NULL);
 
 			if ((file == highlight1File && rank == highlight1Rank) || (file == highlight2File && rank == highlight2Rank))
 			{
-				sfRectangleShape_setPosition(highlightSquare, sfRectangleShape_getPosition(boardSquares[i]));
+				sfRectangleShape_setPosition(highlightSquare, sfRectangleShape_getPosition(boardSquares[index]));
 				sfRenderWindow_drawRectangleShape(window, highlightSquare, NULL);
 			}
 
@@ -281,6 +293,12 @@ void drawPiece(piece p, int file, int rank)
 
 	sfTexture *tex = getPieceTex(p);
 
+	if (isFlipped)
+	{
+		file = 9 - file;
+		rank = 9 - rank;
+	}
+
 	sfSprite_setTexture(sprPiece, tex, sfFalse);
 	sfSprite_setPosition(sprPiece, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
 	sfRenderWindow_drawSprite(window, sprPiece, NULL);
@@ -342,6 +360,12 @@ int getMouseSquare(int mouseX, int mouseY, int *file, int *rank)
 
 	*file = 1 + (int) floor(coords.x);
 	*rank = 8 - (int) floor(coords.y);
+
+	if (isFlipped)
+	{
+		*file = 9 - *file;
+		*rank = 9 - *rank;
+	}
 
 	return 1;
 }

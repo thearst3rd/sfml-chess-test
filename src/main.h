@@ -26,7 +26,7 @@ typedef enum
 
 int main(int argc, char *argv[]);
 
-void calcView(float width, float height);
+void calcView();
 void drawPiece(piece p, int file, int rank);
 
 sfTexture *getPieceTex(piece p);

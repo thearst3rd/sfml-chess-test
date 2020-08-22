@@ -48,6 +48,7 @@ int isDragging = 0;
 int draggingFile;
 int draggingRank;
 int isFlipped = 0;
+int isFullscreen = 0;
 
 piece board[8][8] = {pEmpty};
 
@@ -56,7 +57,7 @@ int main(int argc, char *argv[])
 {
 	// Create the window
 	sfVideoMode mode = {720, 720, 32};
-	window = sfRenderWindow_create(mode, "SFML Chess Board", sfResize | sfClose, NULL);
+	window = sfRenderWindow_create(mode, "SFML Chess Board", sfDefaultStyle, NULL);
 	if (!window)
 	{
 		fprintf(stderr, "ERROR: Unable to create SFML window");
@@ -81,9 +82,9 @@ int main(int argc, char *argv[])
 	texPieces[11] = texBPawn   = sfTexture_createFromFile("img/bP.png", NULL);
 
 	// Set window icon
-	sfVector2u textureSize = sfTexture_getSize(texBQueen);
+	sfVector2u texSize = sfTexture_getSize(texBQueen);
 	sfImage *iconImage = sfTexture_copyToImage(texBQueen);
-	sfRenderWindow_setIcon(window, textureSize.x, textureSize.y, sfImage_getPixelsPtr(iconImage));
+	sfRenderWindow_setIcon(window, texSize.x, texSize.y, sfImage_getPixelsPtr(iconImage));
 
 	// Set texture scaling
 	for (int i = 0; i < 12; i++)
@@ -94,7 +95,7 @@ int main(int argc, char *argv[])
 
 	// Create piece sprite. This will be reused for each piece drawing
 	sprPiece = sfSprite_create();
-	float size = (float) textureSize.x; 	// Assumes square pieces, all the same size
+	float size = (float) texSize.x; 	// Assumes square pieces, all the same size
 	sfSprite_setScale(sprPiece, (sfVector2f) {SQUARE_SIZE / size, SQUARE_SIZE / size});
 	sfSprite_setOrigin(sprPiece, (sfVector2f) {size / 2.0f, size / 2.0f});
 
@@ -123,7 +124,7 @@ int main(int argc, char *argv[])
 	sfRectangleShape_setSize(highlightSquare, (sfVector2f) {SQUARE_SIZE, SQUARE_SIZE});
 	sfRectangleShape_setFillColor(highlightSquare, boardHighlightColor);
 
-	calcView((float) mode.width, (float) mode.height);
+	calcView();
 
 	initChessBoard(INITIAL_POSITION);
 
@@ -140,7 +141,7 @@ int main(int argc, char *argv[])
 			}
 			else if (event.type == sfEvtResized)
 			{
-				calcView((float) event.size.width, (float) event.size.height);
+				calcView();
 			}
 			else if (event.type == sfEvtMouseButtonPressed)
 			{
@@ -196,6 +197,23 @@ int main(int argc, char *argv[])
 
 					case sfKeyF:
 						isFlipped = !isFlipped;
+						break;
+
+					case sfKeyEnter:
+						if (event.key.alt)
+						{
+							isFullscreen = !isFullscreen;
+							sfRenderWindow_destroy(window);
+
+							sfVideoMode videoMode = isFullscreen ? sfVideoMode_getDesktopMode() : mode;
+							sfWindowStyle style = isFullscreen ? sfFullscreen : sfDefaultStyle;
+							window = sfRenderWindow_create(videoMode, "SFML Chess Board", style, NULL);
+
+							sfRenderWindow_setIcon(window, texSize.x, texSize.y, sfImage_getPixelsPtr(iconImage));
+							sfRenderWindow_setVerticalSyncEnabled(window, sfTrue);
+
+							calcView();
+						}
 						break;
 
 					default:
@@ -261,8 +279,12 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void calcView(float width, float height)
+void calcView()
 {
+	sfVector2u windowSize = sfRenderWindow_getSize(window);
+	float width = (float) windowSize.x;
+	float height = (float) windowSize.y;
+
 	float x = 0.0f;
 	float y = 0.0f;
 	float w = SQUARE_SIZE * 8.0f;

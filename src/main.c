@@ -79,6 +79,11 @@ int main(int argc, char *argv[])
 	texPieces[10] = texBBishop = sfTexture_createFromFile("img/bB.png", NULL);
 	texPieces[11] = texBPawn   = sfTexture_createFromFile("img/bP.png", NULL);
 
+	// Set window icon
+	sfVector2u textureSize = sfTexture_getSize(texBQueen);
+	sfImage *iconImage = sfTexture_copyToImage(texBQueen);
+	sfRenderWindow_setIcon(window, textureSize.x, textureSize.y, sfImage_getPixelsPtr(iconImage));
+
 	// Set texture scaling
 	for (int i = 0; i < 12; i++)
 	{
@@ -88,7 +93,7 @@ int main(int argc, char *argv[])
 
 	// Create piece sprite. This will be reused for each piece drawing
 	sprPiece = sfSprite_create();
-	float size = (float) sfTexture_getSize(texWPawn).x; 	// Assumes square pieces, all the same size
+	float size = (float) textureSize.x; 	// Assumes square pieces, all the same size
 	sfSprite_setScale(sprPiece, (sfVector2f) {SQUARE_SIZE / size, SQUARE_SIZE / size});
 	sfSprite_setOrigin(sprPiece, (sfVector2f) {size / 2.0f, size / 2.0f});
 

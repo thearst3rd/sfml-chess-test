@@ -54,6 +54,7 @@ int draggingRank;
 int isFlipped = 0;
 int isEditing = 0;
 int isFullscreen = 0;
+int showHighlighting = 1;
 
 piece board[8][8] = {pEmpty};
 
@@ -221,6 +222,10 @@ int main(int argc, char *argv[])
 						calcView();
 						break;
 
+					case sfKeyH:
+						showHighlighting = !showHighlighting;
+						break;
+
 					case sfKeyEnter:
 						if (event.key.alt)
 						{
@@ -276,7 +281,9 @@ int main(int argc, char *argv[])
 
 			sfRenderWindow_drawRectangleShape(window, boardSquares[index], NULL);
 
-			if ((file == highlight1File && rank == highlight1Rank) || (file == highlight2File && rank == highlight2Rank))
+			if (showHighlighting &&
+					((file == highlight1File && rank == highlight1Rank) ||
+					(file == highlight2File && rank == highlight2Rank)))
 			{
 				sfRectangleShape_setPosition(highlightSquare, sfRectangleShape_getPosition(boardSquares[index]));
 				sfRenderWindow_drawRectangleShape(window, highlightSquare, NULL);

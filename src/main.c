@@ -436,4 +436,10 @@ void initChessBoard(char *fen)
 
 		fen++;
 	}
+
+	if ((rank != 1) || (file != 9))
+	{
+		fprintf(stderr, "ERROR IN FEN: Ended prematurely\n");
+		return;
+	}
 }

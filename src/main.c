@@ -362,11 +362,16 @@ void initChessBoard(char *fen)
 		}
 		else if (c >= '1' && c <= '8')
 		{
-			file += c - '0';
-			if (file > 9)
+			int num = c - '0';
+			if (file + num > 9)
 			{
 				fprintf(stderr, "ERROR IN FEN: Spacer put file over the end\n");
 				return;
+			}
+			for (int i = 0; i < num; i++)
+			{
+				setPiece(file, rank, pEmpty);
+				file++;
 			}
 		}
 		else if (c == '/')

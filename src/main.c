@@ -14,10 +14,14 @@
 // Define resources
 sfRenderWindow *window;
 
+sfRectangleShape *editingRectangle;
+
 sfRectangleShape *boardSquares[64];
 sfColor boardBlackColor;
 sfColor boardWhiteColor;
 sfColor boardHighlightColor;
+sfColor backgroundColor;
+sfColor editingColor;
 
 sfRectangleShape *highlightSquare;
 int highlight1File;
@@ -48,6 +52,7 @@ int isDragging = 0;
 int draggingFile;
 int draggingRank;
 int isFlipped = 0;
+int isEditing = 0;
 int isFullscreen = 0;
 
 piece board[8][8] = {pEmpty};
@@ -103,6 +108,14 @@ int main(int argc, char *argv[])
 	boardBlackColor = sfColor_fromRGB(167, 129, 177);
 	boardWhiteColor = sfColor_fromRGB(234, 223, 237);
 	boardHighlightColor = sfColor_fromRGBA(255, 255, 0, 100);
+	backgroundColor = sfColor_fromRGB(25, 25, 25);
+	editingColor = sfColor_fromRGB(75, 75, 75);
+
+	// Create editing rectangle
+	editingRectangle = sfRectangleShape_create();
+	sfRectangleShape_setFillColor(editingRectangle, editingColor);
+	sfRectangleShape_setPosition(editingRectangle, (sfVector2f) {-1.5f * SQUARE_SIZE, 0.5f * SQUARE_SIZE});
+	sfRectangleShape_setSize(editingRectangle, (sfVector2f) {11.0f * SQUARE_SIZE, 7.0f * SQUARE_SIZE});
 
 	// Create board squares
 	for (int i = 0; i < 64; i++)
@@ -183,6 +196,10 @@ int main(int argc, char *argv[])
 								highlight2Rank = rank;
 							}
 						}
+						else if (isEditing)
+						{
+							setPiece(draggingFile, draggingRank, pEmpty);
+						}
 					}
 				}
 			}
@@ -197,6 +214,11 @@ int main(int argc, char *argv[])
 
 					case sfKeyF:
 						isFlipped = !isFlipped;
+						break;
+
+					case sfKeyE:
+						isEditing = !isEditing;
+						calcView();
 						break;
 
 					case sfKeyEnter:
@@ -223,7 +245,26 @@ int main(int argc, char *argv[])
 		}
 
 		// Draw to window
-		sfRenderWindow_clear(window, sfBlack);
+		sfRenderWindow_clear(window, backgroundColor);
+
+		if (isEditing)
+		{
+			sfRenderWindow_drawRectangleShape(window, editingRectangle, NULL);
+
+			drawPiece(isFlipped ? pWKing : pBKing, (sfVector2f) {-0.75f * SQUARE_SIZE, 1.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pWQueen : pBQueen, (sfVector2f) {-0.75f * SQUARE_SIZE, 2.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pWRook : pBRook, (sfVector2f) {-0.75f * SQUARE_SIZE, 3.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pWKnight : pBKnight, (sfVector2f) {-0.75f * SQUARE_SIZE, 4.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pWBishop : pBBishop, (sfVector2f) {-0.75f * SQUARE_SIZE, 5.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pWPawn : pBPawn, (sfVector2f) {-0.75f * SQUARE_SIZE, 6.5f * SQUARE_SIZE});
+
+			drawPiece(isFlipped ? pBKing : pWKing, (sfVector2f) {8.75f * SQUARE_SIZE, 1.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pBQueen : pWQueen, (sfVector2f) {8.75f * SQUARE_SIZE, 2.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pBRook : pWRook, (sfVector2f) {8.75f * SQUARE_SIZE, 3.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pBKnight : pWKnight, (sfVector2f) {8.75f * SQUARE_SIZE, 4.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pBBishop : pWBishop, (sfVector2f) {8.75f * SQUARE_SIZE, 5.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pBPawn : pWPawn, (sfVector2f) {8.75f * SQUARE_SIZE, 6.5f * SQUARE_SIZE});
+		}
 
 		// Draw the board
 		for (int i = 0; i < 64; i++)
@@ -243,7 +284,7 @@ int main(int argc, char *argv[])
 
 			piece p = getPiece(file, rank);
 			if (p)
-				drawPiece(p, file, rank);
+				drawBoardPiece(p, file, rank);
 		}
 
 		// Draw currently dragged piece
@@ -252,13 +293,9 @@ int main(int argc, char *argv[])
 			piece p = getPiece(draggingFile, draggingRank);
 			if (p)
 			{
-				sfTexture *tex = getPieceTex(p);
-
 				sfVector2f coords = sfRenderWindow_mapPixelToCoords(window, sfMouse_getPosition((sfWindow *) window), NULL);
 
-				sfSprite_setTexture(sprPiece, tex, sfFalse);
-				sfSprite_setPosition(sprPiece, coords);
-				sfRenderWindow_drawSprite(window, sprPiece, NULL);
+				drawPiece(p, coords);
 			}
 		}
 
@@ -285,22 +322,25 @@ void calcView()
 	float width = (float) windowSize.x;
 	float height = (float) windowSize.y;
 
-	float x = 0.0f;
+	float x = (isEditing ? -1.5f * SQUARE_SIZE : 0.0f);
 	float y = 0.0f;
-	float w = SQUARE_SIZE * 8.0f;
+	float w = SQUARE_SIZE * (isEditing ? 11.0f : 8.0f);
 	float h = SQUARE_SIZE * 8.0f;
 
-	if (height > width)
+	float ratio = (w / h);
+	float windowRatio = (width / height);
+
+	if (windowRatio < ratio)
 	{
-		y = (h * (height/width) - h);
-		h += y;
-		y /= -2.0f;
+		float yDiff = w * ((1.0f / windowRatio) - (1.0f / ratio));
+		h += yDiff;
+		y -= yDiff / 2.0f;
 	}
 	else
 	{
-		x = (w * (width/height) - w);
-		w += x;
-		x /= -2.0f;
+		float xDiff = h * (windowRatio - ratio);
+		w += xDiff;
+		x -= xDiff / 2.0f;
 	}
 
 	sfView *newView = sfView_createFromRect((sfFloatRect) {x, y, w, h});
@@ -308,12 +348,19 @@ void calcView()
 	sfView_destroy(newView);
 }
 
-void drawPiece(piece p, int file, int rank)
+void drawPiece(piece p, sfVector2f coords)
+{
+	sfTexture *tex = getPieceTex(p);
+
+	sfSprite_setTexture(sprPiece, tex, sfFalse);
+	sfSprite_setPosition(sprPiece, coords);
+	sfRenderWindow_drawSprite(window, sprPiece, NULL);
+}
+
+void drawBoardPiece(piece p, int file, int rank)
 {
 	if (isDragging && draggingFile == file && draggingRank == rank)
 		return;
-
-	sfTexture *tex = getPieceTex(p);
 
 	if (isFlipped)
 	{
@@ -321,9 +368,7 @@ void drawPiece(piece p, int file, int rank)
 		rank = 9 - rank;
 	}
 
-	sfSprite_setTexture(sprPiece, tex, sfFalse);
-	sfSprite_setPosition(sprPiece, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
-	sfRenderWindow_drawSprite(window, sprPiece, NULL);
+	drawPiece(p, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
 }
 
 sfTexture *getPieceTex(piece p)

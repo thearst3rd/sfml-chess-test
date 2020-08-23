@@ -11,14 +11,14 @@ typedef enum
 {
 	pEmpty,
 	pWPawn,
-	pWBishop,
 	pWKnight,
+	pWBishop,
 	pWRook,
 	pWQueen,
 	pWKing,
 	pBPawn,
-	pBBishop,
 	pBKnight,
+	pBBishop,
 	pBRook,
 	pBQueen,
 	pBKing

@@ -32,15 +32,15 @@ int highlight2Rank;
 sfTexture *texWKing;
 sfTexture *texWQueen;
 sfTexture *texWRook;
-sfTexture *texWKnight;
 sfTexture *texWBishop;
+sfTexture *texWKnight;
 sfTexture *texWPawn;
 
 sfTexture *texBKing;
 sfTexture *texBQueen;
 sfTexture *texBRook;
-sfTexture *texBKnight;
 sfTexture *texBBishop;
+sfTexture *texBKnight;
 sfTexture *texBPawn;
 
 sfTexture *texPieces[12];
@@ -77,15 +77,15 @@ int main(int argc, char *argv[])
 	texPieces[ 0] = texWKing   = sfTexture_createFromFile("img/wK.png", NULL);
 	texPieces[ 1] = texWQueen  = sfTexture_createFromFile("img/wQ.png", NULL);
 	texPieces[ 2] = texWRook   = sfTexture_createFromFile("img/wR.png", NULL);
-	texPieces[ 3] = texWKnight = sfTexture_createFromFile("img/wN.png", NULL);
-	texPieces[ 4] = texWBishop = sfTexture_createFromFile("img/wB.png", NULL);
+	texPieces[ 3] = texWBishop = sfTexture_createFromFile("img/wB.png", NULL);
+	texPieces[ 4] = texWKnight = sfTexture_createFromFile("img/wN.png", NULL);
 	texPieces[ 5] = texWPawn   = sfTexture_createFromFile("img/wP.png", NULL);
 
 	texPieces[ 6] = texBKing   = sfTexture_createFromFile("img/bK.png", NULL);
 	texPieces[ 7] = texBQueen  = sfTexture_createFromFile("img/bQ.png", NULL);
 	texPieces[ 8] = texBRook   = sfTexture_createFromFile("img/bR.png", NULL);
-	texPieces[ 9] = texBKnight = sfTexture_createFromFile("img/bN.png", NULL);
-	texPieces[10] = texBBishop = sfTexture_createFromFile("img/bB.png", NULL);
+	texPieces[ 9] = texBBishop = sfTexture_createFromFile("img/bB.png", NULL);
+	texPieces[10] = texBKnight = sfTexture_createFromFile("img/bN.png", NULL);
 	texPieces[11] = texBPawn   = sfTexture_createFromFile("img/bP.png", NULL);
 
 	// Set window icon
@@ -179,6 +179,8 @@ int main(int argc, char *argv[])
 					else if (getMouseNewPiece(event.mouseButton.x, event.mouseButton.y, &p))
 					{
 						isDragging = 1;
+						draggingFile = 0;
+						draggingRank = 0;
 						newDraggingPiece = p;
 					}
 				}
@@ -298,15 +300,15 @@ int main(int argc, char *argv[])
 			drawPiece(isFlipped ? pWKing : pBKing, (sfVector2f) {-0.75f * SQUARE_SIZE, 1.5f * SQUARE_SIZE});
 			drawPiece(isFlipped ? pWQueen : pBQueen, (sfVector2f) {-0.75f * SQUARE_SIZE, 2.5f * SQUARE_SIZE});
 			drawPiece(isFlipped ? pWRook : pBRook, (sfVector2f) {-0.75f * SQUARE_SIZE, 3.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pWKnight : pBKnight, (sfVector2f) {-0.75f * SQUARE_SIZE, 4.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pWBishop : pBBishop, (sfVector2f) {-0.75f * SQUARE_SIZE, 5.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pWBishop : pBBishop, (sfVector2f) {-0.75f * SQUARE_SIZE, 4.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pWKnight : pBKnight, (sfVector2f) {-0.75f * SQUARE_SIZE, 5.5f * SQUARE_SIZE});
 			drawPiece(isFlipped ? pWPawn : pBPawn, (sfVector2f) {-0.75f * SQUARE_SIZE, 6.5f * SQUARE_SIZE});
 
 			drawPiece(isFlipped ? pBKing : pWKing, (sfVector2f) {8.75f * SQUARE_SIZE, 1.5f * SQUARE_SIZE});
 			drawPiece(isFlipped ? pBQueen : pWQueen, (sfVector2f) {8.75f * SQUARE_SIZE, 2.5f * SQUARE_SIZE});
 			drawPiece(isFlipped ? pBRook : pWRook, (sfVector2f) {8.75f * SQUARE_SIZE, 3.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pBKnight : pWKnight, (sfVector2f) {8.75f * SQUARE_SIZE, 4.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pBBishop : pWBishop, (sfVector2f) {8.75f * SQUARE_SIZE, 5.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pBBishop : pWBishop, (sfVector2f) {8.75f * SQUARE_SIZE, 4.5f * SQUARE_SIZE});
+			drawPiece(isFlipped ? pBKnight : pWKnight, (sfVector2f) {8.75f * SQUARE_SIZE, 5.5f * SQUARE_SIZE});
 			drawPiece(isFlipped ? pBPawn : pWPawn, (sfVector2f) {8.75f * SQUARE_SIZE, 6.5f * SQUARE_SIZE});
 		}
 
@@ -428,10 +430,10 @@ sfTexture *getPieceTex(piece p)
 	{
 		case pWPawn:
 			return texWPawn;
-		case pWBishop:
-			return texWBishop;
 		case pWKnight:
 			return texWKnight;
+		case pWBishop:
+			return texWBishop;
 		case pWRook:
 			return texWRook;
 		case pWQueen:
@@ -440,10 +442,10 @@ sfTexture *getPieceTex(piece p)
 			return texWKing;
 		case pBPawn:
 			return texBPawn;
-		case pBBishop:
-			return texBBishop;
 		case pBKnight:
 			return texBKnight;
+		case pBBishop:
+			return texBBishop;
 		case pBRook:
 			return texBRook;
 		case pBQueen:
@@ -508,9 +510,9 @@ int getMouseNewPiece(int mouseX, int mouseY, piece *p)
 		else if (coords.y < 4.0f)
 			*p = pBRook;
 		else if (coords.y < 5.0f)
-			*p = pBKnight;
-		else if (coords.y < 6.0f)
 			*p = pBBishop;
+		else if (coords.y < 6.0f)
+			*p = pBKnight;
 		else //if (coords.y < 7.0f)
 			*p = pBPawn;
 
@@ -589,12 +591,12 @@ void initChessBoard(char *fen)
 					setPiece(file, rank, isBlack ? pBPawn : pWPawn);
 					break;
 
-				case 'b':
-					setPiece(file, rank, isBlack ? pBBishop : pWBishop);
-					break;
-
 				case 'n':
 					setPiece(file, rank, isBlack ? pBKnight : pWKnight);
+					break;
+
+				case 'b':
+					setPiece(file, rank, isBlack ? pBBishop : pWBishop);
 					break;
 
 				case 'r':

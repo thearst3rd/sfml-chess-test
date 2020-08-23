@@ -12,6 +12,7 @@ LIBS = -lm -lcsfml-graphics -lcsfml-window -lcsfml-system
 # Platform independance
 ifeq ($(OS), Windows_NT)
 	EXE = bin/sfml-app.exe
+	CFLAGS += -mwindows
 else
 	EXE = bin/sfml-app
 endif

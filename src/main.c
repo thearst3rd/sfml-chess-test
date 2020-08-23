@@ -7,6 +7,8 @@
 #include <ctype.h>
 #include <math.h>
 
+#include <SFML/Audio.h>
+
 #include "main.h"
 
 #define SQUARE_SIZE 45.0f
@@ -47,6 +49,11 @@ sfTexture *texPieces[12];
 
 sfSprite *sprPiece;
 
+sfSound *sndMove;
+sfSound *sndCapture;
+sfSound *sndCheck;
+sfSound *sndCheckmate;
+
 // Define global variables
 int isDragging = 0;
 int draggingFile;
@@ -56,6 +63,7 @@ int isFlipped = 0;
 int isEditing = 0;
 int isFullscreen = 0;
 int showHighlighting = 1;
+int playSound = 1;
 
 piece board[8][8] = {pEmpty};
 
@@ -143,6 +151,22 @@ int main(int argc, char *argv[])
 
 	initChessBoard(INITIAL_POSITION);
 
+	// Create sounds
+	sfSoundBuffer *sbMove = sfSoundBuffer_createFromFile("snd/move.ogg");
+	sfSoundBuffer *sbCapture = sfSoundBuffer_createFromFile("snd/capture.ogg");
+	sfSoundBuffer *sbCheck = sfSoundBuffer_createFromFile("snd/check.ogg");
+	sfSoundBuffer *sbCheckmate = sfSoundBuffer_createFromFile("snd/checkmate.ogg");
+
+	sndMove = sfSound_create();
+	sfSound_setBuffer(sndMove, sbMove);
+	sndCapture = sfSound_create();
+	sfSound_setBuffer(sndCapture, sbCapture);
+	sndCheck = sfSound_create();
+	sfSound_setBuffer(sndCheck, sbCheck);
+	sndCheckmate = sfSound_create();
+	sfSound_setBuffer(sndCheckmate, sbCheckmate);
+
+
 	// Main loop
 	while (sfRenderWindow_isOpen(window))
 	{
@@ -213,6 +237,14 @@ int main(int argc, char *argv[])
 							{
 								if (file != draggingFile || rank != draggingRank)
 								{
+									if (playSound && !isEditing)
+									{
+										if (getPiece(file, rank))
+											sfSound_play(sndCapture);
+										else
+											sfSound_play(sndMove);
+									}
+
 									setPiece(file, rank, getPiece(draggingFile, draggingRank));
 									setPiece(draggingFile, draggingRank, pEmpty);
 
@@ -265,6 +297,10 @@ int main(int argc, char *argv[])
 
 					case sfKeyH:
 						showHighlighting = !showHighlighting;
+						break;
+
+					case sfKeyS:
+						playSound = !playSound;
 						break;
 
 					case sfKeyEnter:

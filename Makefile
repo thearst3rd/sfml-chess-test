@@ -7,7 +7,7 @@ CFLAGS = -g0 -Wall
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(patsubst %.c, %.o, $(SOURCES))
 
-LIBS = -lm -lcsfml-graphics -lcsfml-window -lcsfml-system
+LIBS = -lm -lcsfml-graphics -lcsfml-window -lcsfml-system -lcsfml-audio
 
 # Platform independance
 ifeq ($(OS), Windows_NT)

@@ -37,5 +37,8 @@ void setPiece(int file, int rank, piece p);
 // This sets the values at the pointers to the correct file and rank.
 // Returns true if position is inside board, false otherwise
 int getMouseSquare(int mouseX, int mouseY, int *file, int *rank);
+// This sets the values at the pointer to the correct piece.
+// Returns true if new position inside a new piece, false otherwise
+int getMouseNewPiece(int mouseX, int mouseY, piece *p);
 
 void initChessBoard();

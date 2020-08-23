@@ -51,6 +51,7 @@ sfSprite *sprPiece;
 int isDragging = 0;
 int draggingFile;
 int draggingRank;
+piece newDraggingPiece;
 int isFlipped = 0;
 int isEditing = 0;
 int isFullscreen = 0;
@@ -162,16 +163,23 @@ int main(int argc, char *argv[])
 				if (event.mouseButton.button == sfMouseLeft)
 				{
 					int file, rank;
+					piece p;
 					if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 					{
-						piece p = getPiece(file, rank);
+						p = getPiece(file, rank);
 
 						if (p)
 						{
 							isDragging = 1;
 							draggingFile = file;
 							draggingRank = rank;
+							newDraggingPiece = pEmpty;
 						}
+					}
+					else if (getMouseNewPiece(event.mouseButton.x, event.mouseButton.y, &p))
+					{
+						isDragging = 1;
+						newDraggingPiece = p;
 					}
 				}
 			}
@@ -183,23 +191,54 @@ int main(int argc, char *argv[])
 					{
 						isDragging = 0;
 
-						int file, rank;
-						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
+						if (newDraggingPiece)
 						{
-							if (file != draggingFile || rank != draggingRank)
+							int file, rank;
+							if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 							{
-								setPiece(file, rank, getPiece(draggingFile, draggingRank));
-								setPiece(draggingFile, draggingRank, pEmpty);
+								setPiece(file, rank, newDraggingPiece);
 
-								highlight1File = draggingFile;
-								highlight1Rank = draggingRank;
-								highlight2File = file;
-								highlight2Rank = rank;
+								highlight1File = 0;
+								highlight1Rank = 0;
+								highlight2File = 0;
+								highlight2Rank = 0;
 							}
 						}
-						else if (isEditing)
+						else
 						{
-							setPiece(draggingFile, draggingRank, pEmpty);
+							int file, rank;
+							if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
+							{
+								if (file != draggingFile || rank != draggingRank)
+								{
+									setPiece(file, rank, getPiece(draggingFile, draggingRank));
+									setPiece(draggingFile, draggingRank, pEmpty);
+
+									if (isEditing)
+									{
+										highlight1File = 0;
+										highlight1Rank = 0;
+										highlight2File = 0;
+										highlight2Rank = 0;
+									}
+									else
+									{
+										highlight1File = draggingFile;
+										highlight1Rank = draggingRank;
+										highlight2File = file;
+										highlight2Rank = rank;
+									}
+								}
+							}
+							else if (isEditing)
+							{
+								setPiece(draggingFile, draggingRank, pEmpty);
+
+								highlight1File = 0;
+								highlight1Rank = 0;
+								highlight2File = 0;
+								highlight2Rank = 0;
+							}
 						}
 					}
 				}
@@ -297,7 +336,12 @@ int main(int argc, char *argv[])
 		// Draw currently dragged piece
 		if (isDragging)
 		{
-			piece p = getPiece(draggingFile, draggingRank);
+			piece p;
+			if (newDraggingPiece)
+				p = newDraggingPiece;
+			else
+				p = getPiece(draggingFile, draggingRank);
+
 			if (p)
 			{
 				sfVector2f coords = sfRenderWindow_mapPixelToCoords(window, sfMouse_getPosition((sfWindow *) window), NULL);
@@ -429,7 +473,7 @@ int getMouseSquare(int mouseX, int mouseY, int *file, int *rank)
 	coords.x /= SQUARE_SIZE;
 	coords.y /= SQUARE_SIZE;
 
-	if (coords.x < 0 || coords.x >= 8 || coords.y < 0 || coords.y >= 8)
+	if (coords.x < 0.0f || coords.x >= 8.0f || coords.y < 0.0f || coords.y >= 8.0f)
 		return 0;
 
 	*file = 1 + (int) floor(coords.x);
@@ -442,6 +486,42 @@ int getMouseSquare(int mouseX, int mouseY, int *file, int *rank)
 	}
 
 	return 1;
+}
+
+int getMouseNewPiece(int mouseX, int mouseY, piece *p)
+{
+	if (!isEditing)
+		return 0;
+
+	sfVector2f coords = sfRenderWindow_mapPixelToCoords(window, (sfVector2i) {mouseX, mouseY}, NULL);
+	coords.x /= SQUARE_SIZE;
+	coords.y /= SQUARE_SIZE;
+
+	if ((coords.y >= 1.0f && coords.y < 7.0f) &&
+			((coords.x >= -1.25f && coords.x < -0.25f) ||
+			(coords.x >= 8.25f && coords.x < 9.25f)))
+	{
+		if (coords.y < 2.0f)
+			*p = pBKing;
+		else if (coords.y < 3.0f)
+			*p = pBQueen;
+		else if (coords.y < 4.0f)
+			*p = pBRook;
+		else if (coords.y < 5.0f)
+			*p = pBKnight;
+		else if (coords.y < 6.0f)
+			*p = pBBishop;
+		else //if (coords.y < 7.0f)
+			*p = pBPawn;
+
+		// Should we flip to white
+		if ((coords.x > 0.0f) ^ (isFlipped))
+			*p -= 6;
+
+		return 1;
+	}
+
+	return 0;
 }
 
 void initChessBoard(char *fen)

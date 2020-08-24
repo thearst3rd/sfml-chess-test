@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <string.h>
 
 #include <SFML/Audio.h>
 
@@ -70,6 +71,23 @@ piece board[8][8] = {pEmpty};
 
 int main(int argc, char *argv[])
 {
+	char *initialFen = INITIAL_POSITION;
+
+	// Parse command line input
+	for (int i = 1; i < argc; i++)
+	{
+		if ((strcmp(argv[i], "--fen") == 0) || (strcmp(argv[i], "-f") == 0))
+		{
+			i++;
+			if (i >= argc)
+			{
+				fprintf(stderr, "ERROR: You must supply FEN after the %s argument", argv[i - 1]);
+				return 1;
+			}
+			initialFen = argv[i];
+		}
+	}
+
 	// Create the window
 	sfVideoMode mode = {720, 720, 32};
 	window = sfRenderWindow_create(mode, "SFML Chess Board", sfDefaultStyle, NULL);
@@ -149,7 +167,7 @@ int main(int argc, char *argv[])
 
 	calcView();
 
-	initChessBoard(INITIAL_POSITION);
+	initChessBoard(initialFen);
 
 	// Create sounds
 	sfSoundBuffer *sbMove = sfSoundBuffer_createFromFile("snd/move.ogg");
@@ -283,7 +301,7 @@ int main(int argc, char *argv[])
 				{
 					case sfKeyR:
 						if (!isDragging)
-							initChessBoard(INITIAL_POSITION);
+							initChessBoard(initialFen);
 						break;
 
 					case sfKeyF:

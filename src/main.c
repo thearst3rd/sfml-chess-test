@@ -418,7 +418,19 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < 12; i++)
 		sfTexture_destroy(texPieces[i]);
 
+	sfRectangleShape_destroy(highlightSquare);
+
 	sfSprite_destroy(sprPiece);
+
+	sfSoundBuffer_destroy(sbMove);
+	sfSoundBuffer_destroy(sbCapture);
+	sfSoundBuffer_destroy(sbCheck);
+	sfSoundBuffer_destroy(sbCheckmate);
+
+	sfSound_destroy(sndMove);
+	sfSound_destroy(sndCapture);
+	sfSound_destroy(sndCheck);
+	sfSound_destroy(sndCheckmate);
 
 	return 0;
 }

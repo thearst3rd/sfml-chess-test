@@ -2,7 +2,13 @@
 # by thearst3rd
 
 CC = gcc
-CFLAGS = -g0 -Wall
+CFLAGS = -Wall -I../chesslib/include
+
+ifeq ($(DEBUG),1)
+	CFLAGS += -g
+else
+	CFLAGS += -g0
+endif
 
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(patsubst %.c, %.o, $(SOURCES))
@@ -27,7 +33,7 @@ $(ALLOBJECTS): src/%.o : src/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 $(EXE): $(OBJECTS) | bin
-	$(CC) $(CFLAGS) -o $(EXE) $(OBJECTS) $(LIBS)
+	$(CC) $(CFLAGS) -o $(EXE) $(OBJECTS) $(LIBS) -L../chesslib/bin -lchesslib
 
 
 bin:

@@ -7,8 +7,11 @@
 #include <ctype.h>
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <SFML/Audio.h>
+
+#include "chesslib/board.h"
 
 #include "main.h"
 
@@ -25,12 +28,15 @@ sfColor boardWhiteColor;
 sfColor boardHighlightColor;
 sfColor backgroundColor;
 sfColor editingColor;
+sfColor checkColor;
 
 sfRectangleShape *highlightSquare;
 int highlight1File;
 int highlight1Rank;
 int highlight2File;
 int highlight2Rank;
+
+sfCircleShape *checkIndicator;
 
 sfTexture *texWKing;
 sfTexture *texWQueen;
@@ -66,12 +72,12 @@ int isFullscreen = 0;
 int showHighlighting = 1;
 int playSound = 1;
 
-piece board[8][8] = {pEmpty};
+board b;
 
 
 int main(int argc, char *argv[])
 {
-	char *initialFen = INITIAL_POSITION;
+	char *initialFen = INITIAL_FEN;
 
 	// Parse command line input
 	for (int i = 1; i < argc; i++)
@@ -138,6 +144,7 @@ int main(int argc, char *argv[])
 	boardHighlightColor = sfColor_fromRGBA(255, 255, 0, 100);
 	backgroundColor = sfColor_fromRGB(25, 25, 25);
 	editingColor = sfColor_fromRGB(75, 75, 75);
+	checkColor = sfColor_fromRGBA(255, 0, 0, 100);
 
 	// Create editing rectangle
 	editingRectangle = sfRectangleShape_create();
@@ -164,6 +171,13 @@ int main(int argc, char *argv[])
 
 	sfRectangleShape_setSize(highlightSquare, (sfVector2f) {SQUARE_SIZE, SQUARE_SIZE});
 	sfRectangleShape_setFillColor(highlightSquare, boardHighlightColor);
+
+	// Create check indicator
+	checkIndicator = sfCircleShape_create();
+
+	sfCircleShape_setRadius(checkIndicator, SQUARE_SIZE / 2.1f);
+	sfCircleShape_setOrigin(checkIndicator, (sfVector2f) {SQUARE_SIZE / 2.1f, SQUARE_SIZE / 2.1f});
+	sfCircleShape_setFillColor(checkIndicator, checkColor);
 
 	calcView();
 
@@ -208,15 +222,21 @@ int main(int argc, char *argv[])
 					piece p;
 					if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 					{
-						p = getPiece(file, rank);
+						moveList *list = boardGenerateMoves(&b);
 
-						if (p)
+						if ((list->size > 0) || isEditing)
 						{
-							isDragging = 1;
-							draggingFile = file;
-							draggingRank = rank;
-							newDraggingPiece = pEmpty;
+							p = boardGetPiece(&b, posI(file, rank));
+
+							if (p && ((getPieceColor(p) == b.currentPlayer) || isEditing))
+							{
+								isDragging = 1;
+								draggingFile = file;
+								draggingRank = rank;
+								newDraggingPiece = pEmpty;
+							}
 						}
+						freeMoveList(list);
 					}
 					else if (getMouseNewPiece(event.mouseButton.x, event.mouseButton.y, &p))
 					{
@@ -224,6 +244,25 @@ int main(int argc, char *argv[])
 						draggingFile = 0;
 						draggingRank = 0;
 						newDraggingPiece = p;
+					}
+				}
+				else if (event.mouseButton.button == sfMouseRight)
+				{
+					if (isEditing)
+					{
+						int file, rank;
+						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
+						{
+							b.epTarget = posI(file, rank);
+						}
+						else
+						{
+							b.epTarget = POS_INVALID;
+						}
+
+						char *fen = boardGetFen(&b);
+						sfRenderWindow_setTitle(window, fen);
+						free(fen);
 					}
 				}
 			}
@@ -240,7 +279,11 @@ int main(int argc, char *argv[])
 							int file, rank;
 							if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 							{
-								setPiece(file, rank, newDraggingPiece);
+								boardSetPiece(&b, posI(file, rank), newDraggingPiece);
+
+								char *fen = boardGetFen(&b);
+								sfRenderWindow_setTitle(window, fen);
+								free(fen);
 
 								highlight1File = 0;
 								highlight1Rank = 0;
@@ -255,19 +298,15 @@ int main(int argc, char *argv[])
 							{
 								if (file != draggingFile || rank != draggingRank)
 								{
-									if (playSound && !isEditing)
-									{
-										if (getPiece(file, rank))
-											sfSound_play(sndCapture);
-										else
-											sfSound_play(sndMove);
-									}
-
-									setPiece(file, rank, getPiece(draggingFile, draggingRank));
-									setPiece(draggingFile, draggingRank, pEmpty);
-
 									if (isEditing)
 									{
+										boardSetPiece(&b, posI(file, rank), boardGetPiece(&b, posI(draggingFile, draggingRank)));
+										boardSetPiece(&b, posI(draggingFile, draggingRank), pEmpty);
+
+										char *fen = boardGetFen(&b);
+										sfRenderWindow_setTitle(window, fen);
+										free(fen);
+
 										highlight1File = 0;
 										highlight1Rank = 0;
 										highlight2File = 0;
@@ -275,21 +314,72 @@ int main(int argc, char *argv[])
 									}
 									else
 									{
-										highlight1File = draggingFile;
-										highlight1Rank = draggingRank;
-										highlight2File = file;
-										highlight2Rank = rank;
+										uint8_t found = 0;
+										moveList *list = boardGenerateMoves(&b);
+										move m = movePos(posI(draggingFile, draggingRank), posI(file, rank));
+										for (moveListNode *n = list->head; n; n = n->next)
+										{
+											move mTest = n->move;
+											if (posEq(m.to, mTest.to) && posEq(m.from, mTest.from))
+											{
+												found = 1;
+												if (mTest.promotion != empty)
+													m.promotion = queen;
+												break;
+											}
+										}
+										freeMoveList(list);
+
+										if (found)
+										{
+											if (playSound && !isEditing)
+											{
+												if (boardGetPiece(&b, posI(file, rank)) ||
+														(getPieceType(boardGetPiece(&b, posI(draggingFile, draggingRank))) == pawn && draggingFile != file))
+													sfSound_play(sndCapture);
+												else
+													sfSound_play(sndMove);
+											}
+
+											b = boardPlayMove(&b, m);
+
+											highlight1File = draggingFile;
+											highlight1Rank = draggingRank;
+											highlight2File = file;
+											highlight2Rank = rank;
+
+											moveList *list = boardGenerateMoves(&b);
+											if (list->size == 0)
+												sfSound_play(sndCheckmate);
+											else if (boardIsInCheck(&b))
+												sfSound_play(sndCheck);
+
+											if (list->size > 0)
+											{
+
+											}
+
+											freeMoveList(list);
+
+											char *fen = boardGetFen(&b);
+											sfRenderWindow_setTitle(window, fen);
+											free(fen);
+										}
 									}
 								}
 							}
 							else if (isEditing)
 							{
-								setPiece(draggingFile, draggingRank, pEmpty);
+								boardSetPiece(&b, posI(draggingFile, draggingRank), pEmpty);
 
 								highlight1File = 0;
 								highlight1Rank = 0;
 								highlight2File = 0;
 								highlight2Rank = 0;
+
+								char *fen = boardGetFen(&b);
+								sfRenderWindow_setTitle(window, fen);
+								free(fen);
 							}
 						}
 					}
@@ -335,6 +425,56 @@ int main(int argc, char *argv[])
 							sfRenderWindow_setVerticalSyncEnabled(window, sfTrue);
 
 							calcView();
+						}
+						break;
+
+					case sfKeyW:
+						if (isEditing)
+						{
+							b.currentPlayer = white;
+
+							char *fen = boardGetFen(&b);
+							sfRenderWindow_setTitle(window, fen);
+							free(fen);
+						}
+						break;
+
+					case sfKeyB:
+						if (isEditing)
+						{
+							b.currentPlayer = black;
+
+							char *fen = boardGetFen(&b);
+							sfRenderWindow_setTitle(window, fen);
+							free(fen);
+						}
+						break;
+
+					case sfKeyK:
+						if (isEditing)
+						{
+							if (event.key.shift)
+								b.castleState ^= CASTLE_WK;
+							else
+								b.castleState ^= CASTLE_BK;
+
+							char *fen = boardGetFen(&b);
+							sfRenderWindow_setTitle(window, fen);
+							free(fen);
+						}
+						break;
+
+					case sfKeyQ:
+						if (isEditing)
+						{
+							if (event.key.shift)
+								b.castleState ^= CASTLE_WQ;
+							else
+								b.castleState ^= CASTLE_BQ;
+
+							char *fen = boardGetFen(&b);
+							sfRenderWindow_setTitle(window, fen);
+							free(fen);
 						}
 						break;
 
@@ -384,9 +524,15 @@ int main(int argc, char *argv[])
 				sfRenderWindow_drawRectangleShape(window, highlightSquare, NULL);
 			}
 
-			piece p = getPiece(file, rank);
+			piece p = boardGetPiece(&b, posI(file, rank));
 			if (p)
+			{
+				pieceType pt = getPieceType(p);
+
+				if (pt == king && boardIsSquareAttacked(&b, posI(file, rank), b.currentPlayer == white ? black : white))
+					drawCheckIndicator(file, rank);
 				drawBoardPiece(p, file, rank);
+			}
 		}
 
 		// Draw currently dragged piece
@@ -396,7 +542,7 @@ int main(int argc, char *argv[])
 			if (newDraggingPiece)
 				p = newDraggingPiece;
 			else
-				p = getPiece(draggingFile, draggingRank);
+				p = boardGetPiece(&b, posI(draggingFile, draggingRank));
 
 			if (p)
 			{
@@ -419,6 +565,7 @@ int main(int argc, char *argv[])
 		sfTexture_destroy(texPieces[i]);
 
 	sfRectangleShape_destroy(highlightSquare);
+	sfCircleShape_destroy(checkIndicator);
 
 	sfSprite_destroy(sprPiece);
 
@@ -490,6 +637,21 @@ void drawBoardPiece(piece p, int file, int rank)
 	drawPiece(p, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
 }
 
+void drawCheckIndicator(int file, int rank)
+{
+	//if (isDragging && draggingFile == file && draggingRank == rank)
+	//	return;
+
+	if (isFlipped)
+	{
+		file = 9 - file;
+		rank = 9 - rank;
+	}
+
+	sfCircleShape_setPosition(checkIndicator, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
+	sfRenderWindow_drawCircleShape(window, checkIndicator, NULL);
+}
+
 sfTexture *getPieceTex(piece p)
 {
 	switch (p)
@@ -521,16 +683,6 @@ sfTexture *getPieceTex(piece p)
 		default:
 			return NULL;
 	}
-}
-
-piece getPiece(int file, int rank)
-{
-	return board[file - 1][rank - 1];
-}
-
-void setPiece(int file, int rank, piece p)
-{
-	board[file - 1][rank - 1] = p;
 }
 
 // This sets the values at the pointers to the correct file and rank.
@@ -599,98 +751,9 @@ void initChessBoard(char *fen)
 	highlight2File = 0;
 	highlight2Rank = 0;
 
-	// Parse FEN
-	int file = 1;
-	int rank = 8;
+	b = createBoardFromFen(fen);
 
-	char c;
-
-	while ((c = *fen))
-	{
-		if (c == ' ')
-		{
-			break;
-		}
-		else if (c >= '1' && c <= '8')
-		{
-			int num = c - '0';
-			if (file + num > 9)
-			{
-				fprintf(stderr, "ERROR IN FEN: Spacer put file over the end\n");
-				return;
-			}
-			for (int i = 0; i < num; i++)
-			{
-				setPiece(file, rank, pEmpty);
-				file++;
-			}
-		}
-		else if (c == '/')
-		{
-			if (file != 9)
-			{
-				fprintf(stderr, "ERROR IN FEN: Found '/' at wrong position in rank\n");
-				return;
-			}
-			if (rank <= 1)
-			{
-				fprintf(stderr, "ERROR IN FEN: Found '/' after the last rank\n");
-				return;
-			}
-			file = 1;
-			rank--;
-		}
-		else
-		{
-			if (file > 8)
-			{
-				fprintf(stderr, "ERROR IN FEN: Found character '%c' after the end of a rank\n", c);
-				return;
-			}
-
-			char lc = tolower(c);
-			int isBlack = islower(c);
-
-			switch (lc)
-			{
-				case 'p':
-					setPiece(file, rank, isBlack ? pBPawn : pWPawn);
-					break;
-
-				case 'n':
-					setPiece(file, rank, isBlack ? pBKnight : pWKnight);
-					break;
-
-				case 'b':
-					setPiece(file, rank, isBlack ? pBBishop : pWBishop);
-					break;
-
-				case 'r':
-					setPiece(file, rank, isBlack ? pBRook : pWRook);
-					break;
-
-				case 'q':
-					setPiece(file, rank, isBlack ? pBQueen : pWQueen);
-					break;
-
-				case 'k':
-					setPiece(file, rank, isBlack ? pBKing : pWKing);
-					break;
-
-				default:
-					fprintf(stderr, "ERROR IN FEN: Unknown character '%c'\n", c);
-					return;
-			}
-
-			file++;
-		}
-
-		fen++;
-	}
-
-	if ((rank != 1) || (file != 9))
-	{
-		fprintf(stderr, "ERROR IN FEN: Ended prematurely\n");
-		return;
-	}
+	char *newFen = boardGetFen(&b);
+	sfRenderWindow_setTitle(window, newFen);
+	free(newFen);
 }

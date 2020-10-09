@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
 						{
 							p = boardGetPiece(&b, posI(file, rank));
 
-							if (p && ((getPieceColor(p) == b.currentPlayer) || isEditing))
+							if (p && ((pieceGetColor(p) == b.currentPlayer) || isEditing))
 							{
 								isDragging = 1;
 								draggingFile = file;
@@ -323,8 +323,8 @@ int main(int argc, char *argv[])
 											if (posEq(m.to, mTest.to) && posEq(m.from, mTest.from))
 											{
 												found = 1;
-												if (mTest.promotion != empty)
-													m.promotion = queen;
+												if (mTest.promotion != ptEmpty)
+													m.promotion = ptQueen;
 												break;
 											}
 										}
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
 											if (playSound && !isEditing)
 											{
 												if (boardGetPiece(&b, posI(file, rank)) ||
-														(getPieceType(boardGetPiece(&b, posI(draggingFile, draggingRank))) == pawn && draggingFile != file))
+														(pieceGetType(boardGetPiece(&b, posI(draggingFile, draggingRank))) == ptPawn && draggingFile != file))
 													sfSound_play(sndCapture);
 												else
 													sfSound_play(sndMove);
@@ -431,7 +431,7 @@ int main(int argc, char *argv[])
 					case sfKeyW:
 						if (isEditing)
 						{
-							b.currentPlayer = white;
+							b.currentPlayer = pcWhite;
 
 							char *fen = boardGetFen(&b);
 							sfRenderWindow_setTitle(window, fen);
@@ -442,7 +442,7 @@ int main(int argc, char *argv[])
 					case sfKeyB:
 						if (isEditing)
 						{
-							b.currentPlayer = black;
+							b.currentPlayer = pcBlack;
 
 							char *fen = boardGetFen(&b);
 							sfRenderWindow_setTitle(window, fen);
@@ -527,9 +527,9 @@ int main(int argc, char *argv[])
 			piece p = boardGetPiece(&b, posI(file, rank));
 			if (p)
 			{
-				pieceType pt = getPieceType(p);
+				pieceType pt = pieceGetType(p);
 
-				if (pt == king && boardIsSquareAttacked(&b, posI(file, rank), b.currentPlayer == white ? black : white))
+				if (pt == ptKing && boardIsSquareAttacked(&b, posI(file, rank), b.currentPlayer == pcWhite ? pcBlack : pcWhite))
 					drawCheckIndicator(file, rank);
 				drawBoardPiece(p, file, rank);
 			}
@@ -751,7 +751,7 @@ void initChessBoard(char *fen)
 	highlight2File = 0;
 	highlight2Rank = 0;
 
-	b = createBoardFromFen(fen);
+	b = boardCreateFromFen(fen);
 
 	char *newFen = boardGetFen(&b);
 	sfRenderWindow_setTitle(window, newFen);

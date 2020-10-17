@@ -15,7 +15,9 @@ else
 endif
 
 SOURCES = $(wildcard src/*.c)
-OBJECTS = $(patsubst %.c, %.o, $(SOURCES))
+OBJECTS = $(patsubst %.c,%.o,$(SOURCES))
+
+CHESSLIB_OBJECT = $(CHESSLIB_DIR)/bin/libchesslib.a
 
 LIBS = -lm -lcsfml-graphics -lcsfml-window -lcsfml-system -lcsfml-audio
 
@@ -32,21 +34,19 @@ all: sfml-app
 
 sfml-app: $(EXE)
 
-chesslib: $(CHESSLIB_DIR)/bin/libchesslib.a
-
-$(CHESSLIB_DIR)/bin/libchesslib.a:
+$(CHESSLIB_OBJECT):
 	make -C $(CHESSLIB_DIR) chesslib
 
 
-$(ALLOBJECTS): src/%.o : src/%.c
+$(OBJECTS): src/%.o : src/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(EXE): $(OBJECTS) chesslib | bin
+$(EXE): $(OBJECTS) $(CHESSLIB_OBJECT) | bin
 	$(CC) $(CFLAGS) -o $(EXE) $(OBJECTS) $(LIBS) -L$(CHESSLIB_DIR)/bin -lchesslib
 
 
 bin:
-	@mkdir -p bin
+	mkdir -p bin
 
 clean:
 	rm -rf **/*.o bin

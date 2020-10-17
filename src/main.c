@@ -8,6 +8,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <SFML/Audio.h>
 
@@ -71,12 +72,16 @@ int isEditing = 0;
 int isFullscreen = 0;
 int showHighlighting = 1;
 int playSound = 1;
+int doRandomMoves = 0;
 
 board b;
 
 
 int main(int argc, char *argv[])
 {
+	// Set random seed
+	srand(time(NULL));
+
 	char *initialFen = INITIAL_FEN;
 
 	// Parse command line input
@@ -332,15 +337,8 @@ int main(int argc, char *argv[])
 
 										if (found)
 										{
-											if (playSound && !isEditing)
-											{
-												if (boardGetPiece(&b, posI(file, rank)) ||
-														(pieceGetType(boardGetPiece(&b, posI(draggingFile, draggingRank))) == ptPawn && draggingFile != file))
-													sfSound_play(sndCapture);
-												else
-													sfSound_play(sndMove);
-											}
-
+											uint8_t isCapture = boardGetPiece(&b, posI(file, rank)) ||
+													(pieceGetType(boardGetPiece(&b, posI(draggingFile, draggingRank))) == ptPawn && draggingFile != file);
 											b = boardPlayMove(&b, m);
 
 											highlight1File = draggingFile;
@@ -349,14 +347,58 @@ int main(int argc, char *argv[])
 											highlight2Rank = rank;
 
 											moveList *list = boardGenerateMoves(&b);
-											if (list->size == 0)
-												sfSound_play(sndCheckmate);
-											else if (boardIsInCheck(&b))
-												sfSound_play(sndCheck);
-
-											if (list->size > 0)
+											uint8_t isCheck = boardIsInCheck(&b) && (list->size > 0);
+											if (playSound && (list->size == 0))
 											{
+												sfSound_play(sndCheckmate);
+											}
 
+											if (doRandomMoves && list->size > 0)
+											{
+												uint8_t index = rand() % list->size;
+
+												moveListNode *n = list->head;
+												for (int i = 0; i < index; i++)
+												{
+													n = n->next;
+												}
+
+												move randomM = n->move;
+
+												isCapture |= boardGetPiece(&b, randomM.to) ||
+														(pieceGetType(boardGetPiece(&b, randomM.from)) == ptPawn && randomM.to.file != randomM.from.file);
+
+												b = boardPlayMove(&b, randomM);
+
+												freeMoveList(list);
+												list = boardGenerateMoves(&b);
+
+												highlight1File = randomM.from.file;
+												highlight1Rank = randomM.from.rank;
+												highlight2File = randomM.to.file;
+												highlight2Rank = randomM.to.rank;
+
+												isCheck |= boardIsInCheck(&b);
+
+												if (list->size == 0)
+													isCheck = 0;
+
+												if (playSound)
+												{
+													if (list->size == 0)
+														sfSound_play(sndCheckmate);
+												}
+											}
+
+											if (playSound && !isEditing)
+											{
+												if (isCapture)
+													sfSound_play(sndCapture);
+												else
+													sfSound_play(sndMove);
+
+												if (isCheck)
+													sfSound_play(sndCheck);
 											}
 
 											freeMoveList(list);
@@ -387,6 +429,7 @@ int main(int argc, char *argv[])
 			}
 			else if (event.type == sfEvtKeyPressed)
 			{
+				moveList *list;
 				switch (event.key.code)
 				{
 					case sfKeyR:
@@ -409,6 +452,50 @@ int main(int argc, char *argv[])
 
 					case sfKeyS:
 						playSound = !playSound;
+						break;
+
+					case sfKeyM:
+						doRandomMoves = !doRandomMoves;
+						break;
+
+					case sfKeySpace:
+						list = boardGenerateMoves(&b);
+						if (list->size > 0)
+						{
+							uint8_t index = rand() % list->size;
+
+							moveListNode *n = list->head;
+							for (int i = 0; i < index; i++)
+							{
+								n = n->next;
+							}
+
+							move randomM = n->move;
+
+							uint8_t isCapture = boardGetPiece(&b, randomM.to) ||
+									(pieceGetType(boardGetPiece(&b, randomM.from)) == ptPawn && randomM.to.file != randomM.from.file);
+
+							b = boardPlayMove(&b, randomM);
+
+							highlight1File = randomM.from.file;
+							highlight1Rank = randomM.from.rank;
+							highlight2File = randomM.to.file;
+							highlight2Rank = randomM.to.rank;
+
+							if (playSound)
+							{
+								if (isCapture)
+									sfSound_play(sndCapture);
+								else
+									sfSound_play(sndMove);
+
+								if (list->size == 0)
+									sfSound_play(sndCheckmate);
+								else if (boardIsInCheck(&b))
+									sfSound_play(sndCheck);
+							}
+						}
+						freeMoveList(list);
 						break;
 
 					case sfKeyEnter:

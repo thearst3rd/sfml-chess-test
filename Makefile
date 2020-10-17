@@ -1,8 +1,12 @@
 # Makefile for SFML chess board implemenetation in C
 # by thearst3rd
 
+ifndef (CHESSLIB_DIR)
+	CHESSLIB_DIR = ../chesslib
+endif
+
 CC = gcc
-CFLAGS = -Wall -I../chesslib/include
+CFLAGS = -Wall -I$(CHESSLIB_DIR)/include
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -g
@@ -28,12 +32,17 @@ all: sfml-app
 
 sfml-app: $(EXE)
 
+chesslib: $(CHESSLIB_DIR)/bin/libchesslib.a
+
+$(CHESSLIB_DIR)/bin/libchesslib.a:
+	make -C $(CHESSLIB_DIR) chesslib
+
 
 $(ALLOBJECTS): src/%.o : src/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(EXE): $(OBJECTS) | bin
-	$(CC) $(CFLAGS) -o $(EXE) $(OBJECTS) $(LIBS) -L../chesslib/bin -lchesslib
+$(EXE): $(OBJECTS) chesslib | bin
+	$(CC) $(CFLAGS) -o $(EXE) $(OBJECTS) $(LIBS) -L$(CHESSLIB_DIR)/bin -lchesslib
 
 
 bin:

@@ -482,6 +482,13 @@ int main(int argc, char *argv[])
 							highlight2File = randomM.to.file;
 							highlight2Rank = randomM.to.rank;
 
+							char *fen = boardGetFen(&b);
+							sfRenderWindow_setTitle(window, fen);
+							free(fen);
+
+							freeMoveList(list);
+							list = boardGenerateMoves(&b);
+
 							if (playSound)
 							{
 								if (isCapture)

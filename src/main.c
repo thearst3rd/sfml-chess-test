@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
 								newDraggingPiece = pEmpty;
 							}
 						}
-						freeMoveList(list);
+						moveListFree(list);
 					}
 					else if (getMouseNewPiece(event.mouseButton.x, event.mouseButton.y, &p))
 					{
@@ -333,7 +333,7 @@ int main(int argc, char *argv[])
 												break;
 											}
 										}
-										freeMoveList(list);
+										moveListFree(list);
 
 										if (found)
 										{
@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
 
 												b = boardPlayMove(&b, randomM);
 
-												freeMoveList(list);
+												moveListFree(list);
 												list = boardGenerateMoves(&b);
 
 												highlight1File = randomM.from.file;
@@ -401,7 +401,7 @@ int main(int argc, char *argv[])
 													sfSound_play(sndCheck);
 											}
 
-											freeMoveList(list);
+											moveListFree(list);
 
 											char *fen = boardGetFen(&b);
 											sfRenderWindow_setTitle(window, fen);
@@ -486,7 +486,7 @@ int main(int argc, char *argv[])
 							sfRenderWindow_setTitle(window, fen);
 							free(fen);
 
-							freeMoveList(list);
+							moveListFree(list);
 							list = boardGenerateMoves(&b);
 
 							if (playSound)
@@ -502,7 +502,7 @@ int main(int argc, char *argv[])
 									sfSound_play(sndCheck);
 							}
 						}
-						freeMoveList(list);
+						moveListFree(list);
 						break;
 
 					case sfKeyEnter:
@@ -513,7 +513,12 @@ int main(int argc, char *argv[])
 
 							sfVideoMode videoMode = isFullscreen ? sfVideoMode_getDesktopMode() : mode;
 							sfWindowStyle style = isFullscreen ? sfFullscreen : sfDefaultStyle;
-							window = sfRenderWindow_create(videoMode, "SFML Chess Board", style, NULL);
+
+							char *fen = boardGetFen(&b);
+
+							window = sfRenderWindow_create(videoMode, fen, style, NULL);
+
+							free(fen);
 
 							sfRenderWindow_setIcon(window, texSize.x, texSize.y, sfImage_getPixelsPtr(iconImage));
 							sfRenderWindow_setVerticalSyncEnabled(window, sfTrue);
@@ -845,7 +850,7 @@ void initChessBoard(char *fen)
 	highlight2File = 0;
 	highlight2Rank = 0;
 
-	b = boardCreateFromFen(fen);
+	boardInitFromFen(&b, fen);
 
 	char *newFen = boardGetFen(&b);
 	sfRenderWindow_setTitle(window, newFen);

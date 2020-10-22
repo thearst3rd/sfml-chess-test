@@ -25,6 +25,8 @@ sfColor boardWhiteColor;
 sfColor boardHighlightColor;
 sfColor backgroundColor;
 sfColor editingColor;
+sfColor checkColor;
+sfColor pieceTransparentColor;
 
 sfRectangleShape *highlightSquare;
 int highlight1File;
@@ -138,6 +140,8 @@ int main(int argc, char *argv[])
 	boardHighlightColor = sfColor_fromRGBA(255, 255, 0, 100);
 	backgroundColor = sfColor_fromRGB(25, 25, 25);
 	editingColor = sfColor_fromRGB(75, 75, 75);
+	checkColor = sfColor_fromRGBA(255, 0, 0, 100);
+	pieceTransparentColor = sfColor_fromRGBA(255, 255, 255, 70);
 
 	// Create editing rectangle
 	editingRectangle = sfRectangleShape_create();
@@ -478,16 +482,32 @@ void drawPiece(piece p, sfVector2f coords)
 
 void drawBoardPiece(piece p, int file, int rank)
 {
-	if (isDragging && draggingFile == file && draggingRank == rank)
-		return;
+	int coordsFile, coordsRank;
 
 	if (isFlipped)
 	{
-		file = 9 - file;
-		rank = 9 - rank;
+		coordsFile = 9 - file;
+		coordsRank = 9 - rank;
+	}
+	else
+	{
+		coordsFile = file;
+		coordsRank = rank;
 	}
 
-	drawPiece(p, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
+	sfVector2f coords = (sfVector2f) {((float) coordsFile - 0.5) * SQUARE_SIZE,
+			(8.5 - (float) coordsRank) * SQUARE_SIZE};
+
+	if (isDragging && draggingFile == file && draggingRank == rank)
+	{
+		sfSprite_setColor(sprPiece, pieceTransparentColor);
+		drawPiece(p, coords);
+		sfSprite_setColor(sprPiece, sfWhite);
+	}
+	else
+	{
+		drawPiece(p, coords);
+	}
 }
 
 sfTexture *getPieceTex(piece p)

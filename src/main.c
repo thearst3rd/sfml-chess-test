@@ -570,6 +570,31 @@ int main(int argc, char *argv[])
 						}
 						break;
 
+					case sfKeyG:
+						boardInit(&b);
+						while (!isTerminal())
+						{
+							moveList *list = boardGenerateMoves(&b);
+
+							int index = rand() % list->size;
+							moveListNode *n = list->head;
+							for (int i = 0; i < index; i++)
+								n = n->next;
+							move m = n->move;
+							b = boardPlayMove(&b, m);
+
+							highlight1File = m.from.file;
+							highlight1Rank = m.from.rank;
+							highlight2File = m.to.file;
+							highlight2Rank = m.to.rank;
+
+							moveListFree(list);
+						}
+						char *fen = boardGetFen(&b);
+						sfRenderWindow_setTitle(window, fen);
+						free(fen);
+						break;
+
 					default:
 						break;
 				}

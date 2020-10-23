@@ -24,3 +24,5 @@ int getMouseSquare(int mouseX, int mouseY, int *file, int *rank);
 int getMouseNewPiece(int mouseX, int mouseY, piece *p);
 
 void initChessBoard();
+
+uint8_t isTerminal();

@@ -229,9 +229,7 @@ int main(int argc, char *argv[])
 					piece p;
 					if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 					{
-						moveList *list = boardGenerateMoves(&b);
-
-						if ((list->size > 0) || isEditing)
+						if (!isTerminal() || isEditing)
 						{
 							p = boardGetPiece(&b, posI(file, rank));
 
@@ -243,7 +241,6 @@ int main(int argc, char *argv[])
 								newDraggingPiece = pEmpty;
 							}
 						}
-						moveListFree(list);
 					}
 					else if (getMouseNewPiece(event.mouseButton.x, event.mouseButton.y, &p))
 					{
@@ -348,15 +345,15 @@ int main(int argc, char *argv[])
 											highlight2File = file;
 											highlight2Rank = rank;
 
-											moveList *list = boardGenerateMoves(&b);
-											uint8_t isCheck = boardIsInCheck(&b) && (list->size > 0);
-											if (playSound && (list->size == 0))
+											uint8_t isCheck = boardIsInCheck(&b) && !isTerminal();
+											if (playSound && isTerminal())
 											{
 												sfSound_play(sndCheckmate);
 											}
 
-											if (doRandomMoves && list->size > 0)
+											if (doRandomMoves && !isTerminal())
 											{
+												moveList *list = boardGenerateMoves(&b);
 												uint8_t index = rand() % list->size;
 
 												moveListNode *n = list->head;
@@ -372,9 +369,6 @@ int main(int argc, char *argv[])
 
 												b = boardPlayMove(&b, randomM);
 
-												moveListFree(list);
-												list = boardGenerateMoves(&b);
-
 												highlight1File = randomM.from.file;
 												highlight1Rank = randomM.from.rank;
 												highlight2File = randomM.to.file;
@@ -382,14 +376,16 @@ int main(int argc, char *argv[])
 
 												isCheck |= boardIsInCheck(&b);
 
-												if (list->size == 0)
+												if (isTerminal())
 													isCheck = 0;
 
 												if (playSound)
 												{
-													if (list->size == 0)
+													if (isTerminal())
 														sfSound_play(sndCheckmate);
 												}
+
+												moveListFree(list);
 											}
 
 											if (playSound && !isEditing)
@@ -402,8 +398,6 @@ int main(int argc, char *argv[])
 												if (isCheck)
 													sfSound_play(sndCheck);
 											}
-
-											moveListFree(list);
 
 											char *fen = boardGetFen(&b);
 											sfRenderWindow_setTitle(window, fen);
@@ -461,9 +455,9 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeySpace:
-						list = boardGenerateMoves(&b);
-						if (list->size > 0)
+						if (!isTerminal())
 						{
+							list = boardGenerateMoves(&b);
 							uint8_t index = rand() % list->size;
 
 							moveListNode *n = list->head;
@@ -488,9 +482,6 @@ int main(int argc, char *argv[])
 							sfRenderWindow_setTitle(window, fen);
 							free(fen);
 
-							moveListFree(list);
-							list = boardGenerateMoves(&b);
-
 							if (playSound)
 							{
 								if (isCapture)
@@ -498,13 +489,13 @@ int main(int argc, char *argv[])
 								else
 									sfSound_play(sndMove);
 
-								if (list->size == 0)
+								if (isTerminal())
 									sfSound_play(sndCheckmate);
 								else if (boardIsInCheck(&b))
 									sfSound_play(sndCheck);
 							}
+							moveListFree(list);
 						}
-						moveListFree(list);
 						break;
 
 					case sfKeyEnter:
@@ -870,4 +861,21 @@ void initChessBoard(char *fen)
 	char *newFen = boardGetFen(&b);
 	sfRenderWindow_setTitle(window, newFen);
 	free(newFen);
+}
+
+uint8_t isTerminal()
+{
+	if (boardIsInsufficientMaterial(&b))
+		return 1;
+
+	if (b.halfMoveClock >= 150)
+		return 1;
+
+	moveList *list = boardGenerateMoves(&b);
+	size_t listSize = list->size;
+	moveListFree(list);
+	if (listSize == 0)
+		return 1;
+
+	return 0;
 }

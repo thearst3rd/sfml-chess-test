@@ -1,0 +1,27 @@
+TODO - make these good, actual credits
+       I'm not trying to steal stuff I swear!!!
+       Also TODO, make the actual sounds myself (and maybe even images)
+
+
+--- Sounds ---
+
+The following sounds I got from https://github.com/ornicar/lila/tree/master/public/sound/standard.
+I do not actually believe I am able to use these for real when I release this. For more information, see:
+	https://github.com/ornicar/lila/blob/master/COPYING.md
+I hope that it is alright that I am using them as a placeholder for now.
+
+move.wav     <-- Move.ogg
+capture.wav  <-- Capture.ogg
+terminal.wav <-- GenericNotify.ogg
+
+
+The next sound, I got from freesound.org.
+
+check.wav    <-- https://freesound.org/people/Joao_Janz/sounds/478502/
+
+
+--- Images ---
+
+Chess pieces are created by Colin M.L. Burnett. Pieces can be found here:
+
+https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces

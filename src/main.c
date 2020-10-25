@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
 							uint8_t isCapture = (boardGetPiece(&b, to) != pEmpty) ||
 									(pieceGetType(boardGetPiece(&b, from)) == ptPawn && (file != draggingFile));
 
-							if (chessGamePlayMove(&g, m))
+							if (!chessGamePlayMove(&g, m))
 							{
 								b = chessGameGetCurrentBoard(&g);
 
@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeySpace:
-						if (g.terminal != tsOngoing)
+						if (g.terminal == tsOngoing)
 						{
 							list = g.currentLegalMoves;
 							uint8_t index = rand() % list->size;
@@ -441,6 +441,32 @@ int main(int argc, char *argv[])
 						}
 						b = chessGameGetCurrentBoard(&g);
 						char *fen = boardGetFen(&b);
+						sfRenderWindow_setTitle(window, fen);
+						free(fen);
+						break;
+
+					case sfKeyZ:
+						chessGameUndo(&g);
+
+						moveListNode *lastMove = g.moveHistory->tail;
+						if (lastMove)
+						{
+							highlight1File = lastMove->move.from.file;
+							highlight1Rank = lastMove->move.from.rank;
+							highlight2File = lastMove->move.to.file;
+							highlight2Rank = lastMove->move.to.rank;
+						}
+						else
+						{
+							highlight1File = -1;
+							highlight1Rank = -1;
+							highlight2File = -1;
+							highlight2Rank = -1;
+						}
+
+
+						b = chessGameGetCurrentBoard(&g);
+						fen = boardGetFen(&b);
 						sfRenderWindow_setTitle(window, fen);
 						free(fen);
 						break;

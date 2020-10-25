@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
 					{
 						if (!isTerminal() || isEditing)
 						{
-							p = boardGetPiece(&b, posI(file, rank));
+							p = boardGetPiece(&b, sqI(file, rank));
 
 							if (p && ((pieceGetColor(p) == b.currentPlayer) || isEditing))
 							{
@@ -257,11 +257,11 @@ int main(int argc, char *argv[])
 						int file, rank;
 						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 						{
-							b.epTarget = posI(file, rank);
+							b.epTarget = sqI(file, rank);
 						}
 						else
 						{
-							b.epTarget = POS_INVALID;
+							b.epTarget = SQ_INVALID;
 						}
 
 						char *fen = boardGetFen(&b);
@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
 							int file, rank;
 							if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 							{
-								boardSetPiece(&b, posI(file, rank), newDraggingPiece);
+								boardSetPiece(&b, sqI(file, rank), newDraggingPiece);
 
 								char *fen = boardGetFen(&b);
 								sfRenderWindow_setTitle(window, fen);
@@ -304,8 +304,8 @@ int main(int argc, char *argv[])
 								{
 									if (isEditing)
 									{
-										boardSetPiece(&b, posI(file, rank), boardGetPiece(&b, posI(draggingFile, draggingRank)));
-										boardSetPiece(&b, posI(draggingFile, draggingRank), pEmpty);
+										boardSetPiece(&b, sqI(file, rank), boardGetPiece(&b, sqI(draggingFile, draggingRank)));
+										boardSetPiece(&b, sqI(draggingFile, draggingRank), pEmpty);
 
 										char *fen = boardGetFen(&b);
 										sfRenderWindow_setTitle(window, fen);
@@ -320,11 +320,11 @@ int main(int argc, char *argv[])
 									{
 										uint8_t found = 0;
 										moveList *list = boardGenerateMoves(&b);
-										move m = movePos(posI(draggingFile, draggingRank), posI(file, rank));
+										move m = moveSq(sqI(draggingFile, draggingRank), sqI(file, rank));
 										for (moveListNode *n = list->head; n; n = n->next)
 										{
 											move mTest = n->move;
-											if (posEq(m.to, mTest.to) && posEq(m.from, mTest.from))
+											if (sqEq(m.to, mTest.to) && sqEq(m.from, mTest.from))
 											{
 												found = 1;
 												if (mTest.promotion != ptEmpty)
@@ -336,8 +336,8 @@ int main(int argc, char *argv[])
 
 										if (found)
 										{
-											uint8_t isCapture = boardGetPiece(&b, posI(file, rank)) ||
-													(pieceGetType(boardGetPiece(&b, posI(draggingFile, draggingRank))) == ptPawn && draggingFile != file);
+											uint8_t isCapture = boardGetPiece(&b, sqI(file, rank)) ||
+													(pieceGetType(boardGetPiece(&b, sqI(draggingFile, draggingRank))) == ptPawn && draggingFile != file);
 											b = boardPlayMove(&b, m);
 
 											highlight1File = draggingFile;
@@ -408,7 +408,7 @@ int main(int argc, char *argv[])
 							}
 							else if (isEditing)
 							{
-								boardSetPiece(&b, posI(draggingFile, draggingRank), pEmpty);
+								boardSetPiece(&b, sqI(draggingFile, draggingRank), pEmpty);
 
 								highlight1File = 0;
 								highlight1Rank = 0;
@@ -641,12 +641,12 @@ int main(int argc, char *argv[])
 				sfRenderWindow_drawRectangleShape(window, highlightSquare, NULL);
 			}
 
-			piece p = boardGetPiece(&b, posI(file, rank));
+			piece p = boardGetPiece(&b, sqI(file, rank));
 			if (p)
 			{
 				pieceType pt = pieceGetType(p);
 
-				if (pt == ptKing && boardIsSquareAttacked(&b, posI(file, rank), b.currentPlayer == pcWhite ? pcBlack : pcWhite))
+				if (pt == ptKing && boardIsSquareAttacked(&b, sqI(file, rank), b.currentPlayer == pcWhite ? pcBlack : pcWhite))
 					drawCheckIndicator(file, rank);
 				drawBoardPiece(p, file, rank);
 			}
@@ -659,7 +659,7 @@ int main(int argc, char *argv[])
 			if (newDraggingPiece)
 				p = newDraggingPiece;
 			else
-				p = boardGetPiece(&b, posI(draggingFile, draggingRank));
+				p = boardGetPiece(&b, sqI(draggingFile, draggingRank));
 
 			if (p)
 			{

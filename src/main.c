@@ -12,7 +12,7 @@
 
 #include <SFML/Audio.h>
 
-#include "chesslib/board.h"
+#include "chesslib/chessgame.h"
 
 #include "main.h"
 
@@ -21,14 +21,11 @@
 // Define resources
 sfRenderWindow *window;
 
-sfRectangleShape *editingRectangle;
-
 sfRectangleShape *boardSquares[64];
 sfColor boardBlackColor;
 sfColor boardWhiteColor;
 sfColor boardHighlightColor;
 sfColor backgroundColor;
-sfColor editingColor;
 sfColor checkColor;
 sfColor pieceTransparentColor;
 
@@ -69,13 +66,13 @@ int draggingFile;
 int draggingRank;
 piece newDraggingPiece;
 int isFlipped = 0;
-int isEditing = 0;
 int isFullscreen = 0;
 int showHighlighting = 1;
 int playSound = 1;
 int doRandomMoves = 0;
 
-board b;
+const char *initialFen;
+chessGame g;
 
 
 int main(int argc, char *argv[])
@@ -83,7 +80,7 @@ int main(int argc, char *argv[])
 	// Set random seed
 	srand(time(NULL));
 
-	char *initialFen = INITIAL_FEN;
+	initialFen = INITIAL_FEN;
 
 	// Parse command line input
 	for (int i = 1; i < argc; i++)
@@ -149,15 +146,8 @@ int main(int argc, char *argv[])
 	boardWhiteColor = sfColor_fromRGB(234, 223, 237);
 	boardHighlightColor = sfColor_fromRGBA(255, 255, 0, 100);
 	backgroundColor = sfColor_fromRGB(25, 25, 25);
-	editingColor = sfColor_fromRGB(75, 75, 75);
 	checkColor = sfColor_fromRGBA(255, 0, 0, 100);
 	pieceTransparentColor = sfColor_fromRGBA(255, 255, 255, 70);
-
-	// Create editing rectangle
-	editingRectangle = sfRectangleShape_create();
-	sfRectangleShape_setFillColor(editingRectangle, editingColor);
-	sfRectangleShape_setPosition(editingRectangle, (sfVector2f) {-1.5f * SQUARE_SIZE, 0.5f * SQUARE_SIZE});
-	sfRectangleShape_setSize(editingRectangle, (sfVector2f) {11.0f * SQUARE_SIZE, 7.0f * SQUARE_SIZE});
 
 	// Create board squares
 	for (int i = 0; i < 64; i++)
@@ -188,7 +178,8 @@ int main(int argc, char *argv[])
 
 	calcView();
 
-	initChessBoard(initialFen);
+	chessGameInit(&g); 	// Stupid... but it will populate the fields so initChessGame can free them...
+	initChessGame();
 
 	// Create sounds
 	sfSoundBuffer *sbMove = sfSoundBuffer_createFromFile("snd/move.ogg");
@@ -209,6 +200,8 @@ int main(int argc, char *argv[])
 	// Main loop
 	while (sfRenderWindow_isOpen(window))
 	{
+		board b = chessGameGetCurrentBoard(&g);
+
 		// Handle events
 		sfEvent event;
 		while (sfRenderWindow_pollEvent(window, &event))
@@ -229,11 +222,11 @@ int main(int argc, char *argv[])
 					piece p;
 					if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 					{
-						if (!isTerminal() || isEditing)
+						if (g.terminal == tsOngoing)
 						{
 							p = boardGetPiece(&b, sqI(file, rank));
 
-							if (p && ((pieceGetColor(p) == b.currentPlayer) || isEditing))
+							if (p && (pieceGetColor(p) == b.currentPlayer))
 							{
 								isDragging = 1;
 								draggingFile = file;
@@ -241,32 +234,6 @@ int main(int argc, char *argv[])
 								newDraggingPiece = pEmpty;
 							}
 						}
-					}
-					else if (getMouseNewPiece(event.mouseButton.x, event.mouseButton.y, &p))
-					{
-						isDragging = 1;
-						draggingFile = 0;
-						draggingRank = 0;
-						newDraggingPiece = p;
-					}
-				}
-				else if (event.mouseButton.button == sfMouseRight)
-				{
-					if (isEditing)
-					{
-						int file, rank;
-						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
-						{
-							b.epTarget = sqI(file, rank);
-						}
-						else
-						{
-							b.epTarget = SQ_INVALID;
-						}
-
-						char *fen = boardGetFen(&b);
-						sfRenderWindow_setTitle(window, fen);
-						free(fen);
 					}
 				}
 			}
@@ -278,142 +245,81 @@ int main(int argc, char *argv[])
 					{
 						isDragging = 0;
 
-						if (newDraggingPiece)
+						int file, rank;
+						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
 						{
-							int file, rank;
-							if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
-							{
-								boardSetPiece(&b, sqI(file, rank), newDraggingPiece);
+							// Just in case...
+							b = chessGameGetCurrentBoard(&g);
 
-								char *fen = boardGetFen(&b);
-								sfRenderWindow_setTitle(window, fen);
-								free(fen);
+							sq from = sqI(draggingFile, draggingRank);
+							sq to = sqI(file, rank);
+							move m = moveSq(from, to);
+							if (pieceGetType(boardGetPiece(&b, from)) == ptPawn && (rank == 1 || rank == 8))
+								m.promotion = ptQueen;
 
-								highlight1File = 0;
-								highlight1Rank = 0;
-								highlight2File = 0;
-								highlight2Rank = 0;
-							}
-						}
-						else
-						{
-							int file, rank;
-							if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &file, &rank))
+							uint8_t isCapture = (boardGetPiece(&b, to) != pEmpty) ||
+									(pieceGetType(boardGetPiece(&b, from)) == ptPawn && (file != draggingFile));
+
+							if (chessGamePlayMove(&g, m))
 							{
-								if (file != draggingFile || rank != draggingRank)
+								b = chessGameGetCurrentBoard(&g);
+
+								highlight1File = draggingFile;
+								highlight1Rank = draggingRank;
+								highlight2File = file;
+								highlight2Rank = rank;
+
+								uint8_t isCheck = boardIsInCheck(&b) && (g.terminal == tsOngoing);
+								if (playSound && (g.terminal != tsOngoing))
 								{
-									if (isEditing)
+									sfSound_play(sndCheckmate);
+								}
+
+								if (doRandomMoves && (g.terminal == tsOngoing))
+								{
+									moveList *list = g.currentLegalMoves;
+									uint8_t index = rand() % list->size;
+
+									moveListNode *n = list->head;
+									for (int i = 0; i < index; i++)
 									{
-										boardSetPiece(&b, sqI(file, rank), boardGetPiece(&b, sqI(draggingFile, draggingRank)));
-										boardSetPiece(&b, sqI(draggingFile, draggingRank), pEmpty);
-
-										char *fen = boardGetFen(&b);
-										sfRenderWindow_setTitle(window, fen);
-										free(fen);
-
-										highlight1File = 0;
-										highlight1Rank = 0;
-										highlight2File = 0;
-										highlight2Rank = 0;
+										n = n->next;
 									}
-									else
+
+									move randomM = n->move;
+
+									isCapture |= boardGetPiece(&b, randomM.to) ||
+											(pieceGetType(boardGetPiece(&b, randomM.from)) == ptPawn && randomM.to.file != randomM.from.file);
+
+									chessGamePlayMove(&g, randomM);
+									b = chessGameGetCurrentBoard(&g);
+
+									highlight1File = randomM.from.file;
+									highlight1Rank = randomM.from.rank;
+									highlight2File = randomM.to.file;
+									highlight2Rank = randomM.to.rank;
+
+									isCheck |= boardIsInCheck(&b);
+
+									if (g.terminal != tsOngoing)
 									{
-										uint8_t found = 0;
-										moveList *list = boardGenerateMoves(&b);
-										move m = moveSq(sqI(draggingFile, draggingRank), sqI(file, rank));
-										for (moveListNode *n = list->head; n; n = n->next)
-										{
-											move mTest = n->move;
-											if (sqEq(m.to, mTest.to) && sqEq(m.from, mTest.from))
-											{
-												found = 1;
-												if (mTest.promotion != ptEmpty)
-													m.promotion = ptQueen;
-												break;
-											}
-										}
-										moveListFree(list);
+										isCheck = 0;
 
-										if (found)
-										{
-											uint8_t isCapture = boardGetPiece(&b, sqI(file, rank)) ||
-													(pieceGetType(boardGetPiece(&b, sqI(draggingFile, draggingRank))) == ptPawn && draggingFile != file);
-											b = boardPlayMove(&b, m);
-
-											highlight1File = draggingFile;
-											highlight1Rank = draggingRank;
-											highlight2File = file;
-											highlight2Rank = rank;
-
-											uint8_t isCheck = boardIsInCheck(&b) && !isTerminal();
-											if (playSound && isTerminal())
-											{
-												sfSound_play(sndCheckmate);
-											}
-
-											if (doRandomMoves && !isTerminal())
-											{
-												moveList *list = boardGenerateMoves(&b);
-												uint8_t index = rand() % list->size;
-
-												moveListNode *n = list->head;
-												for (int i = 0; i < index; i++)
-												{
-													n = n->next;
-												}
-
-												move randomM = n->move;
-
-												isCapture |= boardGetPiece(&b, randomM.to) ||
-														(pieceGetType(boardGetPiece(&b, randomM.from)) == ptPawn && randomM.to.file != randomM.from.file);
-
-												b = boardPlayMove(&b, randomM);
-
-												highlight1File = randomM.from.file;
-												highlight1Rank = randomM.from.rank;
-												highlight2File = randomM.to.file;
-												highlight2Rank = randomM.to.rank;
-
-												isCheck |= boardIsInCheck(&b);
-
-												if (isTerminal())
-													isCheck = 0;
-
-												if (playSound)
-												{
-													if (isTerminal())
-														sfSound_play(sndCheckmate);
-												}
-
-												moveListFree(list);
-											}
-
-											if (playSound && !isEditing)
-											{
-												if (isCapture)
-													sfSound_play(sndCapture);
-												else
-													sfSound_play(sndMove);
-
-												if (isCheck)
-													sfSound_play(sndCheck);
-											}
-
-											char *fen = boardGetFen(&b);
-											sfRenderWindow_setTitle(window, fen);
-											free(fen);
-										}
+										if (playSound)
+											sfSound_play(sndCheckmate);
 									}
 								}
-							}
-							else if (isEditing)
-							{
-								boardSetPiece(&b, sqI(draggingFile, draggingRank), pEmpty);
 
-								highlight1File = 0;
-								highlight1Rank = 0;
-								highlight2File = 0;
-								highlight2Rank = 0;
+								if (playSound)
+								{
+									if (isCapture)
+										sfSound_play(sndCapture);
+									else
+										sfSound_play(sndMove);
+
+									if (isCheck)
+										sfSound_play(sndCheck);
+								}
 
 								char *fen = boardGetFen(&b);
 								sfRenderWindow_setTitle(window, fen);
@@ -430,16 +336,11 @@ int main(int argc, char *argv[])
 				{
 					case sfKeyR:
 						if (!isDragging)
-							initChessBoard(initialFen);
+							initChessGame();
 						break;
 
 					case sfKeyF:
 						isFlipped = !isFlipped;
-						break;
-
-					case sfKeyE:
-						isEditing = !isEditing;
-						calcView();
 						break;
 
 					case sfKeyH:
@@ -455,9 +356,9 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeySpace:
-						if (!isTerminal())
+						if (g.terminal != tsOngoing)
 						{
-							list = boardGenerateMoves(&b);
+							list = g.currentLegalMoves;
 							uint8_t index = rand() % list->size;
 
 							moveListNode *n = list->head;
@@ -471,7 +372,8 @@ int main(int argc, char *argv[])
 							uint8_t isCapture = boardGetPiece(&b, randomM.to) ||
 									(pieceGetType(boardGetPiece(&b, randomM.from)) == ptPawn && randomM.to.file != randomM.from.file);
 
-							b = boardPlayMove(&b, randomM);
+							chessGamePlayMove(&g, randomM);
+							b = chessGameGetCurrentBoard(&g);
 
 							highlight1File = randomM.from.file;
 							highlight1Rank = randomM.from.rank;
@@ -489,12 +391,11 @@ int main(int argc, char *argv[])
 								else
 									sfSound_play(sndMove);
 
-								if (isTerminal())
+								if (g.terminal != tsOngoing)
 									sfSound_play(sndCheckmate);
 								else if (boardIsInCheck(&b))
 									sfSound_play(sndCheck);
 							}
-							moveListFree(list);
 						}
 						break;
 
@@ -520,76 +421,25 @@ int main(int argc, char *argv[])
 						}
 						break;
 
-					case sfKeyW:
-						if (isEditing)
-						{
-							b.currentPlayer = pcWhite;
-
-							char *fen = boardGetFen(&b);
-							sfRenderWindow_setTitle(window, fen);
-							free(fen);
-						}
-						break;
-
-					case sfKeyB:
-						if (isEditing)
-						{
-							b.currentPlayer = pcBlack;
-
-							char *fen = boardGetFen(&b);
-							sfRenderWindow_setTitle(window, fen);
-							free(fen);
-						}
-						break;
-
-					case sfKeyK:
-						if (isEditing)
-						{
-							if (event.key.shift)
-								b.castleState ^= CASTLE_WK;
-							else
-								b.castleState ^= CASTLE_BK;
-
-							char *fen = boardGetFen(&b);
-							sfRenderWindow_setTitle(window, fen);
-							free(fen);
-						}
-						break;
-
-					case sfKeyQ:
-						if (isEditing)
-						{
-							if (event.key.shift)
-								b.castleState ^= CASTLE_WQ;
-							else
-								b.castleState ^= CASTLE_BQ;
-
-							char *fen = boardGetFen(&b);
-							sfRenderWindow_setTitle(window, fen);
-							free(fen);
-						}
-						break;
-
 					case sfKeyG:
-						boardInit(&b);
-						while (!isTerminal())
+						initChessGame();
+						while (g.terminal == tsOngoing)
 						{
-							moveList *list = boardGenerateMoves(&b);
+							moveList *list = g.currentLegalMoves;
 
 							int index = rand() % list->size;
 							moveListNode *n = list->head;
 							for (int i = 0; i < index; i++)
 								n = n->next;
 							move m = n->move;
-							b = boardPlayMove(&b, m);
+							chessGamePlayMove(&g, m);
 
 							highlight1File = m.from.file;
 							highlight1Rank = m.from.rank;
 							highlight2File = m.to.file;
 							highlight2Rank = m.to.rank;
-
-							moveListFree(list);
 						}
+						b = chessGameGetCurrentBoard(&g);
 						char *fen = boardGetFen(&b);
 						sfRenderWindow_setTitle(window, fen);
 						free(fen);
@@ -603,25 +453,6 @@ int main(int argc, char *argv[])
 
 		// Draw to window
 		sfRenderWindow_clear(window, backgroundColor);
-
-		if (isEditing)
-		{
-			sfRenderWindow_drawRectangleShape(window, editingRectangle, NULL);
-
-			drawPiece(isFlipped ? pWKing : pBKing, (sfVector2f) {-0.75f * SQUARE_SIZE, 1.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pWQueen : pBQueen, (sfVector2f) {-0.75f * SQUARE_SIZE, 2.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pWRook : pBRook, (sfVector2f) {-0.75f * SQUARE_SIZE, 3.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pWBishop : pBBishop, (sfVector2f) {-0.75f * SQUARE_SIZE, 4.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pWKnight : pBKnight, (sfVector2f) {-0.75f * SQUARE_SIZE, 5.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pWPawn : pBPawn, (sfVector2f) {-0.75f * SQUARE_SIZE, 6.5f * SQUARE_SIZE});
-
-			drawPiece(isFlipped ? pBKing : pWKing, (sfVector2f) {8.75f * SQUARE_SIZE, 1.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pBQueen : pWQueen, (sfVector2f) {8.75f * SQUARE_SIZE, 2.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pBRook : pWRook, (sfVector2f) {8.75f * SQUARE_SIZE, 3.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pBBishop : pWBishop, (sfVector2f) {8.75f * SQUARE_SIZE, 4.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pBKnight : pWKnight, (sfVector2f) {8.75f * SQUARE_SIZE, 5.5f * SQUARE_SIZE});
-			drawPiece(isFlipped ? pBPawn : pWPawn, (sfVector2f) {8.75f * SQUARE_SIZE, 6.5f * SQUARE_SIZE});
-		}
 
 		// Draw the board
 		for (int i = 0; i < 64; i++)
@@ -705,9 +536,9 @@ void calcView()
 	float width = (float) windowSize.x;
 	float height = (float) windowSize.y;
 
-	float x = (isEditing ? -1.5f * SQUARE_SIZE : 0.0f);
+	float x = 0.0f;
 	float y = 0.0f;
-	float w = SQUARE_SIZE * (isEditing ? 11.0f : 8.0f);
+	float w = SQUARE_SIZE * 8.0f;
 	float h = SQUARE_SIZE * 8.0f;
 
 	float ratio = (w / h);
@@ -838,69 +669,18 @@ int getMouseSquare(int mouseX, int mouseY, int *file, int *rank)
 	return 1;
 }
 
-int getMouseNewPiece(int mouseX, int mouseY, piece *p)
-{
-	if (!isEditing)
-		return 0;
-
-	sfVector2f coords = sfRenderWindow_mapPixelToCoords(window, (sfVector2i) {mouseX, mouseY}, NULL);
-	coords.x /= SQUARE_SIZE;
-	coords.y /= SQUARE_SIZE;
-
-	if ((coords.y >= 1.0f && coords.y < 7.0f) &&
-			((coords.x >= -1.25f && coords.x < -0.25f) ||
-			(coords.x >= 8.25f && coords.x < 9.25f)))
-	{
-		if (coords.y < 2.0f)
-			*p = pBKing;
-		else if (coords.y < 3.0f)
-			*p = pBQueen;
-		else if (coords.y < 4.0f)
-			*p = pBRook;
-		else if (coords.y < 5.0f)
-			*p = pBBishop;
-		else if (coords.y < 6.0f)
-			*p = pBKnight;
-		else //if (coords.y < 7.0f)
-			*p = pBPawn;
-
-		// Should we flip to white
-		if ((coords.x > 0.0f) ^ (isFlipped))
-			*p -= 6;
-
-		return 1;
-	}
-
-	return 0;
-}
-
-void initChessBoard(char *fen)
+void initChessGame()
 {
 	highlight1File = 0;
 	highlight1Rank = 0;
 	highlight2File = 0;
 	highlight2Rank = 0;
 
-	boardInitFromFen(&b, fen);
+	chessGameFreeComponents(&g);
+	chessGameInitFromFen(&g, initialFen);
 
+	board b = chessGameGetCurrentBoard(&g);
 	char *newFen = boardGetFen(&b);
 	sfRenderWindow_setTitle(window, newFen);
 	free(newFen);
-}
-
-uint8_t isTerminal()
-{
-	if (boardIsInsufficientMaterial(&b))
-		return 1;
-
-	if (b.halfMoveClock >= 150)
-		return 1;
-
-	moveList *list = boardGenerateMoves(&b);
-	size_t listSize = list->size;
-	moveListFree(list);
-	if (listSize == 0)
-		return 1;
-
-	return 0;
 }

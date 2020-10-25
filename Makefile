@@ -50,6 +50,7 @@ bin:
 
 clean:
 	rm -rf **/*.o bin
+	make -C $(CHESSLIB_DIR) clean
 
 run: $(EXE)
 	./$(EXE)

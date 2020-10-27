@@ -103,7 +103,18 @@ int main(int argc, char *argv[])
 
 	// Create the window
 	sfVideoMode mode = {720, 720, 32};
-	window = sfRenderWindow_create(mode, "SFML Chess Board", sfDefaultStyle, NULL);
+	// Default values taken from https://www.sfml-dev.org/documentation/2.5.1/structsf_1_1ContextSettings.php
+	sfContextSettings contextSettings = (sfContextSettings)
+	{
+		0, // depth
+		0, // stencil
+		4, // antialiasing
+		1, // major
+		1, // minor
+		sfContextDefault, // attributes
+		sfFalse // sRgb
+	};
+	window = sfRenderWindow_create(mode, "SFML Chess Board", sfDefaultStyle, &contextSettings);
 	if (!window)
 	{
 		fprintf(stderr, "ERROR: Unable to create SFML window");

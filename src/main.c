@@ -456,7 +456,8 @@ int main(int argc, char *argv[])
 					case sfKeyG:
 						if (isDragging)
 							break;
-						initChessGame();
+						if (g.terminal != tsOngoing)
+							initChessGame();
 						while (g.terminal == tsOngoing)
 						{
 							moveList *list = g.currentLegalMoves;

@@ -335,8 +335,9 @@ int main(int argc, char *argv[])
 				switch (event.key.code)
 				{
 					case sfKeyR:
-						if (!isDragging)
-							initChessGame();
+						if (isDragging)
+							break;
+						initChessGame();
 						break;
 
 					case sfKeyF:
@@ -356,6 +357,8 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeySpace:
+						if (isDragging)
+							break;
 						if (g.terminal == tsOngoing)
 						{
 							list = g.currentLegalMoves;
@@ -422,6 +425,8 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeyG:
+						if (isDragging)
+							break;
 						initChessGame();
 						while (g.terminal == tsOngoing)
 						{
@@ -446,6 +451,8 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeyZ:
+						if (isDragging)
+							break;
 						chessGameUndo(&g);
 
 						moveListNode *lastMove = g.moveHistory->tail;
@@ -464,11 +471,30 @@ int main(int argc, char *argv[])
 							highlight2Rank = -1;
 						}
 
-
 						b = chessGameGetCurrentBoard(&g);
 						fen = boardGetFen(&b);
 						sfRenderWindow_setTitle(window, fen);
 						free(fen);
+						break;
+
+					case sfKeyC:
+						if (isDragging)
+							break;
+						if (g.terminal == tsOngoing)
+						{
+							if (g.repetitions >= 3)
+							{
+								g.terminal = tsDrawClaimedThreefold;
+								if (playSound)
+									sfSound_play(sndTerminal);
+							}
+							else if (b.halfMoveClock >= 100)
+							{
+								g.terminal = tsDrawClaimed50MoveRule;
+								if (playSound)
+									sfSound_play(sndTerminal);
+							}
+						}
 						break;
 
 					default:

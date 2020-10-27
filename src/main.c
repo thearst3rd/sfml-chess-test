@@ -28,6 +28,7 @@ sfColor boardHighlightColor;
 sfColor backgroundColor;
 sfColor checkColor;
 sfColor pieceTransparentColor;
+sfColor legalMoveColor;
 
 sfRectangleShape *highlightSquare;
 int highlight1File;
@@ -36,6 +37,8 @@ int highlight2File;
 int highlight2Rank;
 
 sfCircleShape *checkIndicator;
+sfCircleShape *legalMoveIndicator;
+sfCircleShape *legalCaptureIndicator;
 
 sfTexture *texWKing;
 sfTexture *texWQueen;
@@ -70,6 +73,7 @@ int isFullscreen = 0;
 int showHighlighting = 1;
 int playSound = 1;
 int doRandomMoves = 0;
+int showLegals = 1;
 
 const char *initialFen;
 chessGame g;
@@ -148,6 +152,7 @@ int main(int argc, char *argv[])
 	backgroundColor = sfColor_fromRGB(25, 25, 25);
 	checkColor = sfColor_fromRGBA(255, 0, 0, 100);
 	pieceTransparentColor = sfColor_fromRGBA(255, 255, 255, 70);
+	legalMoveColor = sfColor_fromRGBA(0, 0, 0, 100);
 
 	// Create board squares
 	for (int i = 0; i < 64; i++)
@@ -175,6 +180,19 @@ int main(int argc, char *argv[])
 	sfCircleShape_setRadius(checkIndicator, SQUARE_SIZE / 2.1f);
 	sfCircleShape_setOrigin(checkIndicator, (sfVector2f) {SQUARE_SIZE / 2.1f, SQUARE_SIZE / 2.1f});
 	sfCircleShape_setFillColor(checkIndicator, checkColor);
+
+	// Create legal move indicator
+	legalMoveIndicator = sfCircleShape_create();
+
+	sfCircleShape_setRadius(legalMoveIndicator, SQUARE_SIZE / 5.0f);
+	sfCircleShape_setOrigin(legalMoveIndicator, (sfVector2f) {SQUARE_SIZE / 5.0f, SQUARE_SIZE / 5.0f});
+	sfCircleShape_setFillColor(legalMoveIndicator, legalMoveColor);
+
+	legalCaptureIndicator = sfCircleShape_create();
+
+	sfCircleShape_setRadius(legalCaptureIndicator, SQUARE_SIZE / 2.2f);
+	sfCircleShape_setOrigin(legalCaptureIndicator, (sfVector2f) {SQUARE_SIZE / 2.2f, SQUARE_SIZE / 2.2f});
+	sfCircleShape_setFillColor(legalCaptureIndicator, legalMoveColor);
 
 	calcView();
 
@@ -496,6 +514,10 @@ int main(int argc, char *argv[])
 							}
 						}
 						break;
+					
+					case sfKeyL:
+						showLegals = !showLegals;
+						break;
 
 					default:
 						break;
@@ -530,8 +552,23 @@ int main(int argc, char *argv[])
 				pieceType pt = pieceGetType(p);
 
 				if (pt == ptKing && boardIsSquareAttacked(&b, sqI(file, rank), b.currentPlayer == pcWhite ? pcBlack : pcWhite))
-					drawCheckIndicator(file, rank);
+					drawCircleShape(checkIndicator, file, rank);
 				drawBoardPiece(p, file, rank);
+			}
+
+			if (showLegals && isDragging)
+			{
+				sq from = sqI(draggingFile, draggingRank);
+				sq to = sqI(file, rank);
+
+				for (moveListNode *n = g.currentLegalMoves->head; n; n = n->next)
+				{
+					if (sqEq(n->move.from, from) && sqEq(n->move.to, to))
+					{
+						drawCircleShape(p ? legalCaptureIndicator : legalMoveIndicator, file, rank);
+						break;
+					}
+				}
 			}
 		}
 
@@ -566,6 +603,8 @@ int main(int argc, char *argv[])
 
 	sfRectangleShape_destroy(highlightSquare);
 	sfCircleShape_destroy(checkIndicator);
+	sfCircleShape_destroy(legalMoveIndicator);
+	sfCircleShape_destroy(legalCaptureIndicator);
 
 	sfSprite_destroy(sprPiece);
 
@@ -653,7 +692,7 @@ void drawBoardPiece(piece p, int file, int rank)
 	}
 }
 
-void drawCheckIndicator(int file, int rank)
+void drawCircleShape(sfCircleShape *shape, int file, int rank)
 {
 	if (isFlipped)
 	{
@@ -661,8 +700,8 @@ void drawCheckIndicator(int file, int rank)
 		rank = 9 - rank;
 	}
 
-	sfCircleShape_setPosition(checkIndicator, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
-	sfRenderWindow_drawCircleShape(window, checkIndicator, NULL);
+	sfCircleShape_setPosition(shape, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
+	sfRenderWindow_drawCircleShape(window, shape, NULL);
 }
 
 sfTexture *getPieceTex(piece p)

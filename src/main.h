@@ -12,7 +12,7 @@ int main(int argc, char *argv[]);
 void calcView();
 void drawPiece(piece p, sfVector2f coords);
 void drawBoardPiece(piece p, int file, int rank);
-void drawCheckIndicator(int file, int rank);
+void drawCircleShape(sfCircleShape *shape, int file, int rank);
 
 sfTexture *getPieceTex(piece p);
 

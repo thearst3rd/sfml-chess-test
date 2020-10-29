@@ -11,13 +11,14 @@ int main(int argc, char *argv[]);
 
 void calcView();
 void drawPiece(piece p, sfVector2f coords);
-void drawBoardPiece(piece p, int file, int rank);
-void drawCircleShape(sfCircleShape *shape, int file, int rank);
+void drawBoardPiece(piece p, sq s);
+void drawCircleShape(sfCircleShape *shape, sq s);
 
 sfTexture *getPieceTex(piece p);
 
 // This sets the values at the pointers to the correct file and rank.
 // Returns true if position is inside board, false otherwise
-int getMouseSquare(int mouseX, int mouseY, int *file, int *rank);
+int getMouseSquare(int mouseX, int mouseY, sq *s);
 
 void initChessGame();
+void updateGameState();

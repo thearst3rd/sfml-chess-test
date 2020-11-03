@@ -22,3 +22,5 @@ int getMouseSquare(int mouseX, int mouseY, sq *s);
 
 void initChessGame();
 void updateGameState();
+
+void playAiMove();

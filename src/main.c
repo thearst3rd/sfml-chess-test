@@ -285,39 +285,20 @@ int main(int argc, char *argv[])
 								b = chessGameGetCurrentBoard(g);
 
 								uint8_t isCheck = boardIsInCheck(b) && (g->terminal == tsOngoing);
-								if (playSound && (g->terminal != tsOngoing))
-								{
-									sfSound_play(sndTerminal);
-								}
 
 								if (doRandomMoves && (g->terminal == tsOngoing))
 								{
-									moveList *list = g->currentLegalMoves;
-									uint8_t index = rand() % list->size;
+									playAiMove();
 
-									moveListNode *n = list->head;
-									for (int i = 0; i < index; i++)
-									{
-										n = n->next;
-									}
+									move aiMove = g->moveHistory->tail->move;
 
-									move randomM = n->move;
+									isCapture |= boardGetPiece(b, aiMove.to) ||
+											(pieceGetType(boardGetPiece(b, aiMove.from)) == ptPawn
+											&& aiMove.to.file != aiMove.from.file);
 
-									isCapture |= boardGetPiece(b, randomM.to) ||
-											(pieceGetType(boardGetPiece(b, randomM.from)) == ptPawn && randomM.to.file != randomM.from.file);
-
-									chessGamePlayMove(g, randomM);
 									b = chessGameGetCurrentBoard(g);
 
 									isCheck |= boardIsInCheck(b);
-
-									if (g->terminal != tsOngoing)
-									{
-										isCheck = 0;
-
-										if (playSound)
-											sfSound_play(sndTerminal);
-									}
 								}
 
 								if (playSound)
@@ -327,7 +308,9 @@ int main(int argc, char *argv[])
 									else
 										sfSound_play(sndMove);
 
-									if (isCheck)
+									if (g->terminal != tsOngoing)
+										sfSound_play(sndTerminal);
+									else if (isCheck)
 										sfSound_play(sndCheck);
 								}
 
@@ -339,7 +322,6 @@ int main(int argc, char *argv[])
 			}
 			else if (event.type == sfEvtKeyPressed)
 			{
-				moveList *list;
 				switch (event.key.code)
 				{
 					case sfKeyR:
@@ -374,21 +356,14 @@ int main(int argc, char *argv[])
 							break;
 						if (g->terminal == tsOngoing)
 						{
-							list = g->currentLegalMoves;
-							uint8_t index = rand() % list->size;
+							playAiMove();
 
-							moveListNode *n = list->head;
-							for (int i = 0; i < index; i++)
-							{
-								n = n->next;
-							}
+							move aiMove = g->moveHistory->tail->move;
 
-							move randomM = n->move;
+							uint8_t isCapture = boardGetPiece(b, aiMove.to) ||
+									(pieceGetType(boardGetPiece(b, aiMove.from)) == ptPawn
+									&& aiMove.to.file != aiMove.from.file);
 
-							uint8_t isCapture = boardGetPiece(b, randomM.to) ||
-									(pieceGetType(boardGetPiece(b, randomM.from)) == ptPawn && randomM.to.file != randomM.from.file);
-
-							chessGamePlayMove(g, randomM);
 							b = chessGameGetCurrentBoard(g);
 
 							if (playSound)
@@ -758,4 +733,23 @@ void updateGameState()
 		if (autoFlip)
 			isFlipped = chessGameGetCurrentBoard(g)->currentPlayer == pcBlack;
 	}
+}
+
+void playAiMove()
+{
+	if (g->terminal != tsOngoing)
+		return;
+
+	moveList *list = g->currentLegalMoves;
+	uint8_t index = rand() % list->size;
+
+	moveListNode *n = list->head;
+	for (int i = 0; i < index; i++)
+	{
+		n = n->next;
+	}
+
+	move m = n->move;
+
+	chessGamePlayMove(g, m);
 }

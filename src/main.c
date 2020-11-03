@@ -735,13 +735,29 @@ void updateGameState()
 	}
 }
 
+/////////////////////////////
+// DIFFERENT AI STRATEGIES //
+/////////////////////////////
+
+// TODO - make it so that the player can choose which AI to play against
+
+// Strategy: PICK RANDOM MOVE
+move aiRandomMove()
+{
+	moveList *list = g->currentLegalMoves;
+	int randIndex = rand() % list->size;
+
+	moveListNode *n = list->head;
+	for (int i = 0; i < randIndex; i++)
+		n = n->next;
+
+	return n->move;
+}
+
 // Strategy: MINIMIZE OPPONENTS MOVES
 // It will play a random move such that the number of responses is minimized
-void playAiMove()
+move aiMinOpponentMoves()
 {
-	if (g->terminal != tsOngoing)
-		return;
-
 	moveList *list = g->currentLegalMoves;
 	int size = list->size;
 	int *responses = (int *) malloc(size * sizeof(int));
@@ -795,9 +811,17 @@ void playAiMove()
 			moveIndex++;
 	}
 
-	// Play the given move
-	move m = moveListGet(list, moveIndex);
-	chessGamePlayMove(g, m);
-
 	free(responses);
+
+	// Play the given move
+	return moveListGet(list, moveIndex);
+}
+
+void playAiMove()
+{
+	if (g->terminal != tsOngoing)
+		return;
+
+	move m = aiMinOpponentMoves();
+	chessGamePlayMove(g, m);
 }

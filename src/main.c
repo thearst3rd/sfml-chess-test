@@ -735,21 +735,69 @@ void updateGameState()
 	}
 }
 
+// Strategy: MINIMIZE OPPONENTS MOVES
+// It will play a random move such that the number of responses is minimized
 void playAiMove()
 {
 	if (g->terminal != tsOngoing)
 		return;
 
 	moveList *list = g->currentLegalMoves;
-	uint8_t index = rand() % list->size;
+	int size = list->size;
+	int *responses = (int *) malloc(size * sizeof(int));
 
-	moveListNode *n = list->head;
-	for (int i = 0; i < index; i++)
+	// Figure out how many responses each move will let the opponent have
+	board scratchBoard;
+	for (int i = 0; i < size; i++)
 	{
-		n = n->next;
+		memcpy(&scratchBoard, chessGameGetCurrentBoard(g), sizeof(board));
+
+		move m = moveListGet(list, i);
+		boardPlayMoveInPlace(&scratchBoard, m);
+		moveList *newList = boardGenerateMoves(&scratchBoard);
+
+		responses[i] = newList->size;
+
+		moveListFree(newList);
 	}
 
-	move m = n->move;
+	// Determine what the number of least responses and how many there are
+	int leastResponses = 1000000;
+	int leastResponsesCount = 0;
 
+	for (int i = 0; i < size; i++)
+	{
+		if (responses[i] < leastResponses)
+		{
+			leastResponses = responses[i];
+			leastResponsesCount = 1;
+		}
+		else if (responses[i] == leastResponses)
+		{
+			leastResponsesCount++;
+		}
+	}
+
+	// Now that we know how many, pick a random move out of those moves
+	int randIndex = rand() % leastResponsesCount;
+
+	// Move to the first move with the least number of responses
+	int moveIndex = 0;
+	while (responses[moveIndex] > leastResponses)
+		moveIndex++;
+
+	// Move to the next index where the random move is
+	for (int i = 0; i < randIndex; i++)
+	{
+		moveIndex++;
+
+		while (responses[moveIndex] > leastResponses)
+			moveIndex++;
+	}
+
+	// Play the given move
+	move m = moveListGet(list, moveIndex);
 	chessGamePlayMove(g, m);
+
+	free(responses);
 }

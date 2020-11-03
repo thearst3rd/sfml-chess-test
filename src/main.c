@@ -66,6 +66,7 @@ int isDragging = 0;
 sq draggingSq;
 piece newDraggingPiece;
 int isFlipped = 0;
+int autoFlip = 0;
 int isFullscreen = 0;
 int showHighlighting = 1;
 int playSound = 1;
@@ -350,6 +351,10 @@ int main(int argc, char *argv[])
 
 					case sfKeyF:
 						isFlipped = !isFlipped;
+						break;
+
+					case sfKeyA:
+						autoFlip = !autoFlip;
 						break;
 
 					case sfKeyH:
@@ -746,5 +751,11 @@ void updateGameState()
 
 		highlight1Sq = m.from;
 		highlight2Sq = m.to;
+	}
+
+	if (g->terminal == tsOngoing)
+	{
+		if (autoFlip)
+			isFlipped = chessGameGetCurrentBoard(g)->currentPlayer == pcBlack;
 	}
 }

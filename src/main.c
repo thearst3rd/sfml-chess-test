@@ -12,6 +12,7 @@
 
 #include <SFML/Audio.h>
 
+#include "chesslib/squareset.h"
 #include "chesslib/chessgame.h"
 
 #include "main.h"
@@ -35,6 +36,8 @@ sq highlight1Sq;
 sq highlight2Sq;
 
 sfCircleShape *checkIndicator;
+
+uint64_t legalMoveSet;
 sfCircleShape *legalMoveIndicator;
 sfCircleShape *legalCaptureIndicator;
 
@@ -257,6 +260,8 @@ int main(int argc, char *argv[])
 								isDragging = 1;
 								draggingSq = s;
 								newDraggingPiece = pEmpty;
+
+								legalMoveSet = getLegalSquareSet(s);
 							}
 						}
 					}
@@ -497,14 +502,8 @@ int main(int argc, char *argv[])
 
 			if (showLegals && isDragging)
 			{
-				for (moveListNode *n = g->currentLegalMoves->head; n; n = n->next)
-				{
-					if (sqEq(n->move.from, draggingSq) && sqEq(n->move.to, s))
-					{
-						drawCircleShape(p ? legalCaptureIndicator : legalMoveIndicator, s);
-						break;
-					}
-				}
+				if (sqSetGet(&legalMoveSet, s))
+					drawCircleShape(p ? legalCaptureIndicator : legalMoveIndicator, s);
 			}
 		}
 
@@ -733,6 +732,21 @@ void updateGameState()
 		if (autoFlip)
 			isFlipped = chessGameGetCurrentBoard(g)->currentPlayer == pcBlack;
 	}
+}
+
+// Returns the squares that can be reached by a legal move from the given starting square
+uint64_t getLegalSquareSet(sq s)
+{
+	uint64_t ss = 0;
+
+	for (moveListNode *n = g->currentLegalMoves->head; n; n = n->next)
+	{
+		move m = n->move;
+		if (sqEq(m.from, s))
+			sqSetSet(&ss, m.to, 1);
+	}
+
+	return ss;
 }
 
 /////////////////////////////

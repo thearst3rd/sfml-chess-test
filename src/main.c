@@ -37,7 +37,7 @@ sq highlight2Sq;
 
 sfCircleShape *checkIndicator;
 
-uint64_t legalMoveSet;
+sqSet legalMoveSet;
 sfCircleShape *legalMoveIndicator;
 sfCircleShape *legalCaptureIndicator;
 
@@ -735,9 +735,9 @@ void updateGameState()
 }
 
 // Returns the squares that can be reached by a legal move from the given starting square
-uint64_t getLegalSquareSet(sq s)
+sqSet getLegalSquareSet(sq s)
 {
-	uint64_t ss = 0;
+	sqSet ss = 0;
 
 	for (moveListNode *n = g->currentLegalMoves->head; n; n = n->next)
 	{

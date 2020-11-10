@@ -26,4 +26,11 @@ void updateGameState();
 // Returns the squares that can be reached by a legal move from the given starting square
 sqSet getLegalSquareSet(sq s);
 
-void playAiMove();
+// playAiMove spawns a thread to play the move chosen by aiGetMove
+move aiGetMove();
+void playAiMove(sfTime delay);
+void playAiMoveThreadFunc(void *userData);
+
+int isAiPlaying();
+void setAiPlaying(int value);
+int threadRand();

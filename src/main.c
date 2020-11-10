@@ -79,6 +79,13 @@ int showLegals = 1;
 const char *initialFen;
 chessGame *g = NULL;
 
+// Handle AI multithreading
+int aiPlayingValue = 0;
+sfMutex *aiPlayingMutex;
+sfTime delayTime;
+sfThread *aiThread;
+
+sfMutex *randMutex;
 
 int main(int argc, char *argv[])
 {
@@ -225,6 +232,11 @@ int main(int argc, char *argv[])
 	sndTerminal = sfSound_create();
 	sfSound_setBuffer(sndTerminal, sbTerminal);
 
+	// Handle AI threading
+	delayTime = sfTime_Zero;
+	aiThread = sfThread_create(&playAiMoveThreadFunc, &delayTime);
+	aiPlayingMutex = sfMutex_create();
+	randMutex = sfMutex_create();
 
 	// Main loop
 	while (sfRenderWindow_isOpen(window))
@@ -247,11 +259,11 @@ int main(int argc, char *argv[])
 			{
 				if (event.mouseButton.button == sfMouseLeft)
 				{
-					sq s;
-					piece p;
-					if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &s))
+					if (g->terminal == tsOngoing && !isAiPlaying())
 					{
-						if (g->terminal == tsOngoing)
+						sq s;
+						piece p;
+						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &s))
 						{
 							p = boardGetPiece(b, s);
 
@@ -289,23 +301,6 @@ int main(int argc, char *argv[])
 							{
 								b = chessGameGetCurrentBoard(g);
 
-								uint8_t isCheck = boardIsInCheck(b) && (g->terminal == tsOngoing);
-
-								if (doRandomMoves && (g->terminal == tsOngoing))
-								{
-									playAiMove();
-
-									move aiMove = g->moveHistory->tail->move;
-
-									isCapture |= boardGetPiece(b, aiMove.to) ||
-											(pieceGetType(boardGetPiece(b, aiMove.from)) == ptPawn
-											&& aiMove.to.file != aiMove.from.file);
-
-									b = chessGameGetCurrentBoard(g);
-
-									isCheck |= boardIsInCheck(b);
-								}
-
 								if (playSound)
 								{
 									if (isCapture)
@@ -315,11 +310,14 @@ int main(int argc, char *argv[])
 
 									if (g->terminal != tsOngoing)
 										sfSound_play(sndTerminal);
-									else if (isCheck)
+									else if (boardIsInCheck(b))
 										sfSound_play(sndCheck);
 								}
 
 								updateGameState();
+
+								if (doRandomMoves && (g->terminal == tsOngoing))
+									playAiMove(sfMilliseconds(100));
 							}
 						}
 					}
@@ -330,7 +328,7 @@ int main(int argc, char *argv[])
 				switch (event.key.code)
 				{
 					case sfKeyR:
-						if (isDragging)
+						if (isDragging || isAiPlaying())
 							break;
 						initChessGame();
 						b = chessGameGetCurrentBoard(g);
@@ -357,35 +355,10 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeySpace:
-						if (isDragging)
+						if (isDragging || isAiPlaying())
 							break;
 						if (g->terminal == tsOngoing)
-						{
-							playAiMove();
-
-							move aiMove = g->moveHistory->tail->move;
-
-							uint8_t isCapture = boardGetPiece(b, aiMove.to) ||
-									(pieceGetType(boardGetPiece(b, aiMove.from)) == ptPawn
-									&& aiMove.to.file != aiMove.from.file);
-
-							b = chessGameGetCurrentBoard(g);
-
-							if (playSound)
-							{
-								if (isCapture)
-									sfSound_play(sndCapture);
-								else
-									sfSound_play(sndMove);
-
-								if (g->terminal != tsOngoing)
-									sfSound_play(sndTerminal);
-								else if (boardIsInCheck(b))
-									sfSound_play(sndCheck);
-							}
-
-							updateGameState();
-						}
+							playAiMove(sfTime_Zero);
 						break;
 
 					case sfKeyEnter:
@@ -411,19 +384,13 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeyG:
-						if (isDragging)
+						if (isDragging || isAiPlaying())
 							break;
 						if (g->terminal != tsOngoing)
 							initChessGame();
 						while (g->terminal == tsOngoing)
 						{
-							moveList *list = g->currentLegalMoves;
-
-							int index = rand() % list->size;
-							moveListNode *n = list->head;
-							for (int i = 0; i < index; i++)
-								n = n->next;
-							move m = n->move;
+							move m = aiGetMove();
 							chessGamePlayMove(g, m);
 						}
 						b = chessGameGetCurrentBoard(g);
@@ -432,7 +399,7 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeyZ:
-						if (isDragging)
+						if (isDragging || isAiPlaying())
 							break;
 						chessGameUndo(g);
 						b = chessGameGetCurrentBoard(g);
@@ -441,7 +408,7 @@ int main(int argc, char *argv[])
 						break;
 
 					case sfKeyC:
-						if (isDragging)
+						if (isDragging || isAiPlaying())
 							break;
 						if (g->terminal == tsOngoing)
 						{
@@ -552,6 +519,9 @@ int main(int argc, char *argv[])
 	sfSound_destroy(sndCapture);
 	sfSound_destroy(sndCheck);
 	sfSound_destroy(sndTerminal);
+
+	sfThread_destroy(aiThread);
+	sfMutex_destroy(aiPlayingMutex);
 
 	return 0;
 }
@@ -758,8 +728,10 @@ sqSet getLegalSquareSet(sq s)
 // Strategy: PICK RANDOM MOVE
 move aiRandomMove()
 {
+	//sfSleep(sfMilliseconds(5000));
+
 	moveList *list = g->currentLegalMoves;
-	int randIndex = rand() % list->size;
+	int randIndex = threadRand() % list->size;
 
 	moveListNode *n = list->head;
 	for (int i = 0; i < randIndex; i++)
@@ -809,7 +781,7 @@ move aiMinOpponentMoves()
 	}
 
 	// Now that we know how many, pick a random move out of those moves
-	int randIndex = rand() % leastResponsesCount;
+	int randIndex = threadRand() % leastResponsesCount;
 
 	// Move to the first move with the least number of responses
 	int moveIndex = 0;
@@ -831,11 +803,72 @@ move aiMinOpponentMoves()
 	return moveListGet(list, moveIndex);
 }
 
-void playAiMove()
+move aiGetMove()
 {
-	if (g->terminal != tsOngoing)
-		return;
+	return aiRandomMove();
+}
 
-	move m = aiMinOpponentMoves();
+
+//////////////////
+// AI THREADING //
+//////////////////
+
+void playAiMoveThreadFunc(void *userData)
+{
+	setAiPlaying(1);
+
+	sfTime delay = *((sfTime *) userData);
+	sfSleep(delay);
+
+	move m = aiGetMove();
+
+	board *b = chessGameGetCurrentBoard(g);
+	pieceType ptFrom = pieceGetType(boardGetPiece(b, m.from));
+	piece pTo = boardGetPiece(b, m.to);
+
 	chessGamePlayMove(g, m);
+
+	if (pTo != pEmpty || (ptFrom == ptPawn && m.to.file != m.from.file))
+		sfSound_play(sndCapture);
+	else
+		sfSound_play(sndMove);
+
+	if (g->terminal != tsOngoing)
+		sfSound_play(sndTerminal);
+	else if (boardIsInCheck(chessGameGetCurrentBoard(g)))
+		sfSound_play(sndCheck);
+
+	setAiPlaying(0);
+
+	updateGameState();
+}
+
+void playAiMove(sfTime delay)
+{
+	delayTime = delay;
+	sfThread_launch(aiThread);
+}
+
+int isAiPlaying()
+{
+	sfMutex_lock(aiPlayingMutex);
+	int value = aiPlayingValue;
+	sfMutex_unlock(aiPlayingMutex);
+
+	return value;
+}
+
+void setAiPlaying(int value)
+{
+	sfMutex_lock(aiPlayingMutex);
+	aiPlayingValue = value;
+	sfMutex_unlock(aiPlayingMutex);
+}
+
+int threadRand()
+{
+	sfMutex_lock(randMutex);
+	int value = rand();
+	sfMutex_unlock(randMutex);
+	return value;
 }

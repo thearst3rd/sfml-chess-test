@@ -55,7 +55,7 @@ sfSprite *sprPiece;
 sfSound *sndMove;
 sfSound *sndCapture;
 sfSound *sndCheck;
-sfSound *sndCheckmate;
+sfSound *sndTerminal;
 
 // Define global variables
 int isDragging = 0;
@@ -174,10 +174,10 @@ int main(int argc, char *argv[])
 	initChessBoard(initialFen);
 
 	// Create sounds
-	sfSoundBuffer *sbMove = sfSoundBuffer_createFromFile("snd/move.ogg");
-	sfSoundBuffer *sbCapture = sfSoundBuffer_createFromFile("snd/capture.ogg");
-	sfSoundBuffer *sbCheck = sfSoundBuffer_createFromFile("snd/check.ogg");
-	sfSoundBuffer *sbCheckmate = sfSoundBuffer_createFromFile("snd/checkmate.ogg");
+	sfSoundBuffer *sbMove = sfSoundBuffer_createFromFile("snd/move.wav");
+	sfSoundBuffer *sbCapture = sfSoundBuffer_createFromFile("snd/capture.wav");
+	sfSoundBuffer *sbCheck = sfSoundBuffer_createFromFile("snd/check.wav");
+	sfSoundBuffer *sbTerminal = sfSoundBuffer_createFromFile("snd/terminal.wav");
 
 	sndMove = sfSound_create();
 	sfSound_setBuffer(sndMove, sbMove);
@@ -185,8 +185,8 @@ int main(int argc, char *argv[])
 	sfSound_setBuffer(sndCapture, sbCapture);
 	sndCheck = sfSound_create();
 	sfSound_setBuffer(sndCheck, sbCheck);
-	sndCheckmate = sfSound_create();
-	sfSound_setBuffer(sndCheckmate, sbCheckmate);
+	sndTerminal = sfSound_create();
+	sfSound_setBuffer(sndTerminal, sbTerminal);
 
 
 	// Main loop
@@ -429,12 +429,12 @@ int main(int argc, char *argv[])
 	sfSoundBuffer_destroy(sbMove);
 	sfSoundBuffer_destroy(sbCapture);
 	sfSoundBuffer_destroy(sbCheck);
-	sfSoundBuffer_destroy(sbCheckmate);
+	sfSoundBuffer_destroy(sbTerminal);
 
 	sfSound_destroy(sndMove);
 	sfSound_destroy(sndCapture);
 	sfSound_destroy(sndCheck);
-	sfSound_destroy(sndCheckmate);
+	sfSound_destroy(sndTerminal);
 
 	return 0;
 }

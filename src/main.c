@@ -12,8 +12,7 @@
 
 #include <SFML/Audio.h>
 
-#include "chesslib/squareset.h"
-#include "chesslib/chessgame.h"
+#include "chesslib/chess.h"
 
 #include "main.h"
 
@@ -77,7 +76,7 @@ int doRandomMoves = 0;
 int showLegals = 1;
 
 const char *initialFen;
-chessGame *g = NULL;
+chess *g = NULL;
 
 // Handle AI multithreading
 int aiPlayingValue = 0;
@@ -215,7 +214,7 @@ int main(int argc, char *argv[])
 
 	calcView();
 
-	initChessGame();
+	initChess();
 
 	// Create sounds
 	sfSoundBuffer *sbMove = sfSoundBuffer_createFromFile("snd/move.wav");
@@ -241,8 +240,6 @@ int main(int argc, char *argv[])
 	// Main loop
 	while (sfRenderWindow_isOpen(window))
 	{
-		board *b = chessGameGetCurrentBoard(g);
-
 		// Handle events
 		sfEvent event;
 		while (sfRenderWindow_pollEvent(window, &event))
@@ -265,9 +262,9 @@ int main(int argc, char *argv[])
 						piece p;
 						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &s))
 						{
-							p = boardGetPiece(b, s);
+							p = chessGetPiece(g, s);
 
-							if (p && (pieceGetColor(p) == b->currentPlayer))
+							if (p && (pieceGetColor(p) == chessGetPlayer(g)))
 							{
 								isDragging = 1;
 								draggingSq = s;
@@ -291,16 +288,14 @@ int main(int argc, char *argv[])
 						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &s))
 						{
 							move m = moveSq(draggingSq, s);
-							if (pieceGetType(boardGetPiece(b, draggingSq)) == ptPawn && (s.rank == 1 || s.rank == 8))
+							if (pieceGetType(chessGetPiece(g, draggingSq)) == ptPawn && (s.rank == 1 || s.rank == 8))
 								m.promotion = ptQueen;
 
-							uint8_t isCapture = (boardGetPiece(b, s) != pEmpty) ||
-									(pieceGetType(boardGetPiece(b, draggingSq)) == ptPawn && (s.file != draggingSq.file));
+							uint8_t isCapture = (chessGetPiece(g, s) != pEmpty) ||
+									(pieceGetType(chessGetPiece(g, draggingSq)) == ptPawn && (s.file != draggingSq.file));
 
-							if (!chessGamePlayMove(g, m))
+							if (!chessPlayMove(g, m))
 							{
-								b = chessGameGetCurrentBoard(g);
-
 								if (playSound)
 								{
 									if (isCapture)
@@ -310,7 +305,7 @@ int main(int argc, char *argv[])
 
 									if (g->terminal != tsOngoing)
 										sfSound_play(sndTerminal);
-									else if (boardIsInCheck(b))
+									else if (chessIsInCheck(g))
 										sfSound_play(sndCheck);
 								}
 
@@ -330,8 +325,7 @@ int main(int argc, char *argv[])
 					case sfKeyR:
 						if (isDragging || isAiPlaying())
 							break;
-						initChessGame();
-						b = chessGameGetCurrentBoard(g);
+						initChess();
 						break;
 
 					case sfKeyF:
@@ -370,7 +364,7 @@ int main(int argc, char *argv[])
 							sfVideoMode videoMode = isFullscreen ? sfVideoMode_getDesktopMode() : mode;
 							sfWindowStyle style = isFullscreen ? sfFullscreen : sfDefaultStyle;
 
-							char *fen = boardGetFen(b);
+							char *fen = chessGetFen(g);
 
 							window = sfRenderWindow_create(videoMode, fen, style, NULL);
 
@@ -387,13 +381,12 @@ int main(int argc, char *argv[])
 						if (isDragging || isAiPlaying())
 							break;
 						if (g->terminal != tsOngoing)
-							initChessGame();
+							initChess();
 						while (g->terminal == tsOngoing)
 						{
 							move m = aiGetMove();
-							chessGamePlayMove(g, m);
+							chessPlayMove(g, m);
 						}
-						b = chessGameGetCurrentBoard(g);
 
 						updateGameState();
 						break;
@@ -401,8 +394,7 @@ int main(int argc, char *argv[])
 					case sfKeyZ:
 						if (isDragging || isAiPlaying())
 							break;
-						chessGameUndo(g);
-						b = chessGameGetCurrentBoard(g);
+						chessUndo(g);
 
 						updateGameState();
 						break;
@@ -418,7 +410,7 @@ int main(int argc, char *argv[])
 								if (playSound)
 									sfSound_play(sndTerminal);
 							}
-							else if (b->halfMoveClock >= 100)
+							else if (chessGetHalfMoveClock(g) >= 100)
 							{
 								g->terminal = tsDrawClaimed50MoveRule;
 								if (playSound)
@@ -457,12 +449,12 @@ int main(int argc, char *argv[])
 				sfRenderWindow_drawRectangleShape(window, highlightSquare, NULL);
 			}
 
-			piece p = boardGetPiece(b, s);
+			piece p = chessGetPiece(g, s);
 			if (p)
 			{
 				pieceType pt = pieceGetType(p);
 
-				if (pt == ptKing && boardIsSquareAttacked(b, s, b->currentPlayer == pcWhite ? pcBlack : pcWhite))
+				if (pt == ptKing && chessIsSquareAttacked(g, s))
 					drawCircleShape(checkIndicator, s);
 				drawBoardPiece(p, s);
 			}
@@ -481,7 +473,7 @@ int main(int argc, char *argv[])
 			if (newDraggingPiece)
 				p = newDraggingPiece;
 			else
-				p = boardGetPiece(b, draggingSq);
+				p = chessGetPiece(g, draggingSq);
 
 			if (p)
 			{
@@ -668,19 +660,19 @@ int getMouseSquare(int mouseX, int mouseY, sq *s)
 	return 1;
 }
 
-void initChessGame()
+void initChess()
 {
 	if (g)
-		chessGameFree(g);
+		chessFree(g);
 
-	g = chessGameCreateFromFen(initialFen);
+	g = chessCreateFen(initialFen);
 
 	updateGameState();
 }
 
 void updateGameState()
 {
-	char *fen = boardGetFen(chessGameGetCurrentBoard(g));
+	char *fen = chessGetFen(g);
 	sfRenderWindow_setTitle(window, fen);
 	free(fen);
 
@@ -700,7 +692,7 @@ void updateGameState()
 	if (g->terminal == tsOngoing)
 	{
 		if (autoFlip)
-			isFlipped = chessGameGetCurrentBoard(g)->currentPlayer == pcBlack;
+			isFlipped = chessGetPlayer(g) == pcBlack;
 	}
 }
 
@@ -752,7 +744,7 @@ move aiMinOpponentMoves()
 	board scratchBoard;
 	for (int i = 0; i < size; i++)
 	{
-		memcpy(&scratchBoard, chessGameGetCurrentBoard(g), sizeof(board));
+		memcpy(&scratchBoard, chessGetBoard(g), sizeof(board));
 
 		move m = moveListGet(list, i);
 		boardPlayMoveInPlace(&scratchBoard, m);
@@ -822,11 +814,10 @@ void playAiMoveThreadFunc(void *userData)
 
 	move m = aiGetMove();
 
-	board *b = chessGameGetCurrentBoard(g);
-	pieceType ptFrom = pieceGetType(boardGetPiece(b, m.from));
-	piece pTo = boardGetPiece(b, m.to);
+	pieceType ptFrom = pieceGetType(chessGetPiece(g, m.from));
+	piece pTo = chessGetPiece(g, m.to);
 
-	chessGamePlayMove(g, m);
+	chessPlayMove(g, m);
 
 	if (pTo != pEmpty || (ptFrom == ptPawn && m.to.file != m.from.file))
 		sfSound_play(sndCapture);
@@ -835,7 +826,7 @@ void playAiMoveThreadFunc(void *userData)
 
 	if (g->terminal != tsOngoing)
 		sfSound_play(sndTerminal);
-	else if (boardIsInCheck(chessGameGetCurrentBoard(g)))
+	else if (chessIsInCheck(g))
 		sfSound_play(sndCheck);
 
 	setAiPlaying(0);

@@ -20,7 +20,7 @@ sfTexture *getPieceTex(piece p);
 // Returns true if position is inside board, false otherwise
 int getMouseSquare(int mouseX, int mouseY, sq *s);
 
-void initChessGame();
+void initChess();
 void updateGameState();
 
 // Returns the squares that can be reached by a legal move from the given starting square

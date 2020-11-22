@@ -21,6 +21,7 @@ sfTexture *getPieceTex(piece p);
 int getMouseSquare(int mouseX, int mouseY, sq *s);
 
 void initChess();
+void updateWindowTitle();
 void updateGameState();
 
 // Returns the squares that can be reached by a legal move from the given starting square

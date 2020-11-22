@@ -89,7 +89,7 @@ sfMutex *randMutex;
 int main(int argc, char *argv[])
 {
 	// Set random seed
-	srand(time(NULL));
+	seedRand(time(NULL));
 
 	initialFen = INITIAL_FEN;
 
@@ -867,10 +867,37 @@ void setAiPlaying(int value)
 	sfMutex_unlock(aiPlayingMutex);
 }
 
+// Thread safe cross platform RNG based on Wichmann-Hill
+// https://en.wikipedia.org/wiki/Wichmann-Hill
+// I'm doing this because on Windows using msys2, mingw64, and the msys2 version of sfThread, something wasn't right
+// about calling rand() inside of a thread and it returned the same number every time. This is to get around that
+
+uint16_t s1, s2, s3;
+
+void seedRand(uint32_t seed)
+{
+	// seed: 0xCCBBBAAA
+	// s1 = AAA, s2 = BBB, s3 = CC
+
+	sfMutex_lock(randMutex);
+	s1 = (uint16_t) (seed & 0x00000FFF);
+	s2 = (uint16_t) ((seed & 0x00FFF000) >> 12);
+	s3 = (uint16_t) ((seed & 0xFF000000) >> 24);
+	sfMutex_unlock(randMutex);
+}
+
 int threadRand()
 {
 	sfMutex_lock(randMutex);
-	int value = rand();
+
+	s1 = (171 * (uint32_t) s1) % 30269;
+	s2 = (172 * (uint32_t) s2) % 30307;
+	s3 = (170 * (uint32_t) s3) % 30323;
+
+	double r = fmod((((double) s1) / 30269.0) + (((double) s2) / 30307.0) + (((double) s3) / 30323.0), 1.0);
+	int value = floor(r * RAND_MAX);
+
 	sfMutex_unlock(randMutex);
+
 	return value;
 }

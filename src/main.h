@@ -34,4 +34,5 @@ void playAiMoveThreadFunc(void *userData);
 
 int isAiPlaying();
 void setAiPlaying(int value);
-int threadRand();
+void seedRand(unsigned int seed);
+int threadRand(); 	// Uses our own thread safe wichman-hill generator

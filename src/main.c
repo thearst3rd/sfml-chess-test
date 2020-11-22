@@ -389,11 +389,8 @@ int main(int argc, char *argv[])
 							sfVideoMode videoMode = isFullscreen ? sfVideoMode_getDesktopMode() : mode;
 							sfWindowStyle style = isFullscreen ? sfFullscreen : sfDefaultStyle;
 
-							char *fen = chessGetFen(g);
-
-							window = sfRenderWindow_create(videoMode, fen, style, NULL);
-
-							free(fen);
+							window = sfRenderWindow_create(videoMode, "SFML Chess Board", style, NULL);
+							updateWindowTitle();
 
 							sfRenderWindow_setIcon(window, texSize.x, texSize.y, sfImage_getPixelsPtr(iconImage));
 							sfRenderWindow_setVerticalSyncEnabled(window, sfTrue);
@@ -698,11 +695,25 @@ void initChess()
 	updateGameState();
 }
 
-void updateGameState()
+void updateWindowTitle()
 {
 	char *fen = chessGetFen(g);
-	sfRenderWindow_setTitle(window, fen);
+	if (g->repetitions == 1)
+	{
+		sfRenderWindow_setTitle(window, fen);
+	}
+	else
+	{
+		char message[150];
+		sprintf(message, "Repetitions: %d   %s", g->repetitions, fen);
+		sfRenderWindow_setTitle(window, message);
+	}
 	free(fen);
+}
+
+void updateGameState()
+{
+	updateWindowTitle();
 
 	if (g->moveHistory->tail == NULL)
 	{

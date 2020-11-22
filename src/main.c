@@ -88,8 +88,6 @@ sfMutex *randMutex;
 
 int main(int argc, char *argv[])
 {
-	// Set random seed
-	seedRand(time(NULL));
 
 	initialFen = INITIAL_FEN;
 
@@ -235,7 +233,10 @@ int main(int argc, char *argv[])
 	delayTime = sfTime_Zero;
 	aiThread = sfThread_create(&playAiMoveThreadFunc, &delayTime);
 	aiPlayingMutex = sfMutex_create();
+
+	// Set random seed
 	randMutex = sfMutex_create();
+	seedRand(time(NULL));
 
 	// Main loop
 	while (sfRenderWindow_isOpen(window))

@@ -512,6 +512,7 @@ int main(int argc, char *argv[])
 
 	sfThread_destroy(aiThread);
 	sfMutex_destroy(aiPlayingMutex);
+	sfMutex_destroy(randMutex);
 
 	return 0;
 }

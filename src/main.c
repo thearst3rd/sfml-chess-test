@@ -405,12 +405,14 @@ int main(int argc, char *argv[])
 							if (g->repetitions >= 3)
 							{
 								g->terminal = tsDrawClaimedThreefold;
+								updateWindowTitle();
 								if (playSound)
 									sfSound_play(sndTerminal);
 							}
 							else if (chessGetHalfMoveClock(g) >= 100)
 							{
 								g->terminal = tsDrawClaimed50MoveRule;
+								updateWindowTitle();
 								if (playSound)
 									sfSound_play(sndTerminal);
 							}
@@ -671,17 +673,48 @@ void initChess()
 
 void updateWindowTitle()
 {
+	char message[155];
 	char *fen = chessGetFen(g);
-	if (g->repetitions == 1)
+	if (g->terminal != tsOngoing)
 	{
-		sfRenderWindow_setTitle(window, fen);
+		char termMessage[40];
+		switch (g->terminal)
+		{
+			case tsCheckmate:
+				sprintf(termMessage, "%s wins: Checkmate", chessGetPlayer(g) == pcWhite ? "Black" : "White");
+				break;
+			case tsDrawStalemate:
+				strcpy(termMessage, "Draw: Stalemate");
+				break;
+			case tsDrawClaimed50MoveRule:
+				strcpy(termMessage, "Draw: 50 move");
+				break;
+			case tsDraw75MoveRule:
+				strcpy(termMessage, "Draw: 75 move");
+				break;
+			case tsDrawClaimedThreefold:
+				strcpy(termMessage, "Draw: Threefold");
+				break;
+			case tsDrawFivefold:
+				strcpy(termMessage, "Draw: Fivefold");
+				break;
+			case tsDrawInsufficient:
+				strcpy(termMessage, "Draw: Insufficient");
+				break;
+			default:
+				sprintf(termMessage, "Unknown terminalState %d", g->terminal);
+		}
+		sprintf(message, "%s   %s", termMessage, fen);
+	}
+	else if (g->repetitions != 1)
+	{
+		sprintf(message, "Repetitions: %d   %s", g->repetitions, fen);
 	}
 	else
 	{
-		char message[150];
-		sprintf(message, "Repetitions: %d   %s", g->repetitions, fen);
-		sfRenderWindow_setTitle(window, message);
+		strcpy(message, fen);
 	}
+	sfRenderWindow_setTitle(window, message);
 	free(fen);
 }
 

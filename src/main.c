@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
 			{
 				if (event.mouseButton.button == sfMouseLeft)
 				{
-					if (g->terminal == tsOngoing && !isAiPlaying())
+					if (chessGetTerminalState(g) == tsOngoing && !isAiPlaying())
 					{
 						sq s;
 						piece p;
@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
 									else
 										sfSound_play(sndMove);
 
-									if (g->terminal != tsOngoing)
+									if (chessGetTerminalState(g) != tsOngoing)
 										sfSound_play(sndTerminal);
 									else if (chessIsInCheck(g))
 										sfSound_play(sndCheck);
@@ -312,7 +312,7 @@ int main(int argc, char *argv[])
 
 								updateGameState();
 
-								if (doRandomMoves && (g->terminal == tsOngoing))
+								if (doRandomMoves && (chessGetTerminalState(g) == tsOngoing))
 									playAiMove(sfMilliseconds(100));
 							}
 						}
@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
 					case sfKeySpace:
 						if (isDragging || isAiPlaying())
 							break;
-						if (g->terminal == tsOngoing)
+						if (chessGetTerminalState(g) == tsOngoing)
 							playAiMove(sfTime_Zero);
 						break;
 
@@ -378,9 +378,9 @@ int main(int argc, char *argv[])
 					case sfKeyG:
 						if (isDragging || isAiPlaying())
 							break;
-						if (g->terminal != tsOngoing)
+						if (chessGetTerminalState(g) != tsOngoing)
 							initChess();
-						while (g->terminal == tsOngoing)
+						while (chessGetTerminalState(g) == tsOngoing)
 						{
 							move m = aiGetMove();
 							chessPlayMove(g, m);
@@ -400,22 +400,19 @@ int main(int argc, char *argv[])
 					case sfKeyC:
 						if (isDragging || isAiPlaying())
 							break;
-						if (g->terminal == tsOngoing)
+						if (chessCanClaimDraw50(g))
 						{
-							if (g->repetitions >= 3)
-							{
-								g->terminal = tsDrawClaimedThreefold;
-								updateWindowTitle();
-								if (playSound)
-									sfSound_play(sndTerminal);
-							}
-							else if (chessGetHalfMoveClock(g) >= 100)
-							{
-								g->terminal = tsDrawClaimed50MoveRule;
-								updateWindowTitle();
-								if (playSound)
-									sfSound_play(sndTerminal);
-							}
+							chessClaimDraw50(g);
+							updateWindowTitle();
+							if (playSound)
+								sfSound_play(sndTerminal);
+						}
+						else if (chessCanClaimDrawThreefold(g))
+						{
+							chessClaimDrawThreefold(g);
+							updateWindowTitle();
+							if (playSound)
+								sfSound_play(sndTerminal);
 						}
 						break;
 
@@ -675,10 +672,10 @@ void updateWindowTitle()
 {
 	char message[155];
 	char *fen = chessGetFen(g);
-	if (g->terminal != tsOngoing)
+	if (chessGetTerminalState(g) != tsOngoing)
 	{
 		char termMessage[40];
-		switch (g->terminal)
+		switch (chessGetTerminalState(g))
 		{
 			case tsCheckmate:
 				sprintf(termMessage, "%s wins: Checkmate", chessGetPlayer(g) == pcWhite ? "Black" : "White");
@@ -702,13 +699,13 @@ void updateWindowTitle()
 				strcpy(termMessage, "Draw: Insufficient");
 				break;
 			default:
-				sprintf(termMessage, "Unknown terminalState %d", g->terminal);
+				sprintf(termMessage, "Unknown terminalState %d", chessGetTerminalState(g));
 		}
 		sprintf(message, "%s   %s", termMessage, fen);
 	}
-	else if (g->repetitions != 1)
+	else if (chessGetRepetitions(g) != 1)
 	{
-		sprintf(message, "Repetitions: %d   %s", g->repetitions, fen);
+		sprintf(message, "Repetitions: %d   %s", chessGetRepetitions(g), fen);
 	}
 	else
 	{
@@ -722,20 +719,20 @@ void updateGameState()
 {
 	updateWindowTitle();
 
-	if (g->moveHistory->tail == NULL)
+	if (chessGetMoveHistory(g)->tail == NULL)
 	{
 		highlight1Sq = SQ_INVALID;
 		highlight2Sq = SQ_INVALID;
 	}
 	else
 	{
-		move m = g->moveHistory->tail->move;
+		move m = chessGetMoveHistory(g)->tail->move;
 
 		highlight1Sq = m.from;
 		highlight2Sq = m.to;
 	}
 
-	if (g->terminal == tsOngoing)
+	if (chessGetTerminalState(g) == tsOngoing)
 	{
 		if (autoFlip)
 			isFlipped = chessGetPlayer(g) == pcBlack;
@@ -747,7 +744,7 @@ sqSet getLegalSquareSet(sq s)
 {
 	sqSet ss = 0;
 
-	for (moveListNode *n = g->currentLegalMoves->head; n; n = n->next)
+	for (moveListNode *n = chessGetLegalMoves(g)->head; n; n = n->next)
 	{
 		move m = n->move;
 		if (sqEq(m.from, s))
@@ -768,7 +765,7 @@ move aiRandomMove()
 {
 	//sfSleep(sfMilliseconds(5000));
 
-	moveList *list = g->currentLegalMoves;
+	moveList *list = chessGetLegalMoves(g);
 	int randIndex = threadRand() % list->size;
 
 	moveListNode *n = list->head;
@@ -782,7 +779,7 @@ move aiRandomMove()
 // It will play a random move such that the number of responses is minimized
 move aiMinOpponentMoves()
 {
-	moveList *list = g->currentLegalMoves;
+	moveList *list = chessGetLegalMoves(g);
 	int size = list->size;
 	int *responses = (int *) malloc(size * sizeof(int));
 
@@ -870,7 +867,7 @@ void playAiMoveThreadFunc(void *userData)
 	else
 		sfSound_play(sndMove);
 
-	if (g->terminal != tsOngoing)
+	if (chessGetTerminalState(g) != tsOngoing)
 		sfSound_play(sndTerminal);
 	else if (chessIsInCheck(g))
 		sfSound_play(sndCheck);

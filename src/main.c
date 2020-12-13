@@ -838,6 +838,7 @@ move aiMinOpponentMoves()
 	return moveListGet(list, moveIndex);
 }
 
+// This is the function which determines which strategy the AI will use
 move aiGetMove()
 {
 	return aiRandomMove();

@@ -406,13 +406,7 @@ int main(int argc, char *argv[])
 							initChess();
 						while (chessGetTerminalState(g) == tsOngoing)
 						{
-							moveList *list = chessGetLegalMoves(g);
-
-							int index = rand() % list->size;
-							moveListNode *n = list->head;
-							for (int i = 0; i < index; i++)
-								n = n->next;
-							move m = n->move;
+							move m = aiGetMove();
 							chessPlayMove(g, m);
 						}
 
@@ -862,11 +856,17 @@ move aiMinOpponentMoves()
 	return moveListGet(list, moveIndex);
 }
 
+// This is the function which determines which strategy the AI will use
+move aiGetMove()
+{
+	return aiRandomMove();
+}
+
 void playAiMove()
 {
 	if (chessGetTerminalState(g) != tsOngoing)
 		return;
 
-	move m = aiRandomMove();
+	move m = aiGetMove();
 	chessPlayMove(g, m);
 }

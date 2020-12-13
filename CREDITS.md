@@ -13,8 +13,8 @@ The other two sounds, I actually recorded myself! Feel free to use them, though 
 
 Filename | Author | License
 --- | --- | ---
-move.wav | [Terry Hearst](https://github.com/thearst3rd) | [CC BY 3.0]
-capture.wav | [Terry Hearst](https://github.com/thearst3rd) | [CC BY 3.0]
+move.wav | [Terry Hearst](https://github.com/thearst3rd) | Public Domain
+capture.wav | [Terry Hearst](https://github.com/thearst3rd) | Public Domain
 
 
 ## Images

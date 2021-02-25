@@ -15,6 +15,7 @@
 #include "chesslib/chess.h"
 
 #include "main.h"
+#include "uci.h"
 
 #define SQUARE_SIZE 45.0f
 
@@ -88,7 +89,7 @@ sfMutex *randMutex;
 
 int main(int argc, char *argv[])
 {
-
+	const char *execName = "stockfish";
 	initialFen = INITIAL_FEN;
 
 	// Parse command line input
@@ -103,8 +104,31 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 			initialFen = argv[i];
+			uciSetInitialFen(initialFen);
+		}
+		else if ((strcmp(argv[i], "--limit") == 0) || (strcmp(argv[i], "-l") == 0))
+		{
+			i++;
+			if (i >= argc)
+			{
+				fprintf(stderr, "ERROR: You must supply a limit string after the %s argument", argv[i - 1]);
+				return 1;
+			}
+			uciSetLimit(argv[i]);
+		}
+		else if ((strcmp(argv[i], "--engine") == 0) || (strcmp(argv[i], "-e") == 0))
+		{
+			i++;
+			if (i >= argc)
+			{
+				fprintf(stderr, "ERROR: You must supply an engine executable name after the %s argument", argv[i - 1]);
+				return 1;
+			}
+			execName = argv[i];
 		}
 	}
+
+	uciCreate("stockfish");
 
 	// Create the window
 	sfVideoMode mode = {720, 720, 32};
@@ -513,6 +537,8 @@ int main(int argc, char *argv[])
 	sfMutex_destroy(aiPlayingMutex);
 	sfMutex_destroy(randMutex);
 
+	uciFree();
+
 	return 0;
 }
 
@@ -841,7 +867,7 @@ move aiMinOpponentMoves()
 // This is the function which determines which strategy the AI will use
 move aiGetMove()
 {
-	return aiRandomMove();
+	return uciGetMove(g);
 }
 
 

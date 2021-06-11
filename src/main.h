@@ -25,7 +25,7 @@ void updateWindowTitle();
 void updateGameState();
 
 // Returns the squares that can be reached by a legal move from the given starting square
-sqSet getLegalSquareSet(sq s);
+sqSet *getLegalSquareSet(sq s);
 
 move aiGetMove();
 void playAiMove();

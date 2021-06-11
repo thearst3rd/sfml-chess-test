@@ -745,8 +745,9 @@ void initChess()
 
 void updateWindowTitle()
 {
-	char message[155];
 	char *fen = chessGetFen(g);
+	size_t fenLen = strlen(fen);
+	char *message = malloc(fenLen + 50);	// Upper bound on title length
 	if (chessGetTerminalState(g) != tsOngoing)
 	{
 		char termMessage[40];
@@ -788,6 +789,7 @@ void updateWindowTitle()
 	}
 	sfRenderWindow_setTitle(window, message);
 	free(fen);
+	free(message);
 }
 
 void updateGameState()

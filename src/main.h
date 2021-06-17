@@ -23,6 +23,7 @@ int getMouseSquare(int mouseX, int mouseY, sq *s);
 void initChess();
 void updateWindowTitle();
 void updateGameState();
+void updateFog();
 
 // Returns the squares that can be reached by a legal move from the given starting square
 sqSet *getLegalSquareSet(sq s);

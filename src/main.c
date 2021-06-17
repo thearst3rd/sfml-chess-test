@@ -29,14 +29,18 @@ sfColor backgroundColor;
 sfColor checkColor;
 sfColor pieceTransparentColor;
 sfColor legalMoveColor;
+sfColor fogColor;
 
 sfRectangleShape *highlightSquare;
 sq highlight1Sq;
 sq highlight2Sq;
 
+sfRectangleShape *fogSquare;
+
 sfCircleShape *checkIndicator;
 
 sqSet *legalMoveSet = NULL;
+sqSet *fogVisibleSet = NULL;
 sfCircleShape *legalMoveIndicator;
 sfCircleShape *legalCaptureIndicator;
 
@@ -70,10 +74,11 @@ piece newDraggingPiece;
 int isFlipped = 0;
 int autoFlip = 0;
 int isFullscreen = 0;
-int showHighlighting = 1;
+int showHighlighting = 0;
 int playSound = 1;
 int doRandomMoves = 0;
 int showLegals = 1;
+int showFog = 1;
 
 const char *initialFen;
 int boardWidth = 8;
@@ -204,6 +209,7 @@ int main(int argc, char *argv[])
 	checkColor = sfColor_fromRGBA(255, 0, 0, 100);
 	pieceTransparentColor = sfColor_fromRGBA(255, 255, 255, 70);
 	legalMoveColor = sfColor_fromRGBA(0, 0, 0, 100);
+	fogColor = sfColor_fromRGBA(0, 0, 0, 150);
 
 	// Create board squares
 	boardSquares = (sfRectangleShape **) malloc(NUM_SQUARES * sizeof(sfRectangleShape *));
@@ -228,6 +234,12 @@ int main(int argc, char *argv[])
 
 	sfRectangleShape_setSize(highlightSquare, (sfVector2f) {SQUARE_SIZE, SQUARE_SIZE});
 	sfRectangleShape_setFillColor(highlightSquare, boardHighlightColor);
+
+	// Create the fog square
+	fogSquare = sfRectangleShape_create();
+
+	sfRectangleShape_setSize(fogSquare, (sfVector2f) {SQUARE_SIZE, SQUARE_SIZE});
+	sfRectangleShape_setFillColor(fogSquare, fogColor);
 
 	// Create check indicator
 	checkIndicator = sfCircleShape_create();
@@ -377,6 +389,7 @@ int main(int argc, char *argv[])
 
 					case sfKeyF:
 						isFlipped = !isFlipped;
+						updateFog();
 						break;
 
 					case sfKeyA:
@@ -490,6 +503,11 @@ int main(int argc, char *argv[])
 						showLegals = !showLegals;
 						break;
 
+					case sfKeyW:
+						showFog = !showFog;
+						updateWindowTitle();
+						break;
+
 					default:
 						break;
 				}
@@ -509,7 +527,6 @@ int main(int argc, char *argv[])
 			int index = isFlipped ? (NUM_SQUARES - 1) - i : i;
 
 			piece p = chessGetPiece(g, s);
-			pieceType pt = pieceGetType(p);
 
 			if (p != pBlocker)
 				sfRenderWindow_drawRectangleShape(window, boardSquares[index], NULL);
@@ -520,11 +537,15 @@ int main(int argc, char *argv[])
 				sfRenderWindow_drawRectangleShape(window, highlightSquare, NULL);
 			}
 
-			if (p != pEmpty && p != pBlocker)
+			if (!showFog || sqSetGet(fogVisibleSet, s))
 			{
-				if (pt == ptKing && chessIsSquareAttacked(g, s))
-					drawCircleShape(checkIndicator, s);
-				drawBoardPiece(p, s);
+				if (p != pEmpty && p != pBlocker)
+					drawBoardPiece(p, s);
+			}
+			else
+			{
+				sfRectangleShape_setPosition(fogSquare, sfRectangleShape_getPosition(boardSquares[index]));
+				sfRenderWindow_drawRectangleShape(window, fogSquare, NULL);
 			}
 
 			if (showLegals && isDragging)
@@ -745,7 +766,11 @@ void initChess()
 
 void updateWindowTitle()
 {
-	char *fen = chessGetFen(g);
+	char *fen;
+	if (showFog)
+		fen = chessGetPlayer(g) == pcWhite ? "Fog of War - White to Move" : "Fog of War - Black to Move";
+	else
+		fen = chessGetFen(g);
 	size_t fenLen = strlen(fen);
 	char *message = malloc(fenLen + 50);	// Upper bound on title length
 	if (chessGetTerminalState(g) != tsOngoing)
@@ -754,7 +779,7 @@ void updateWindowTitle()
 		switch (chessGetTerminalState(g))
 		{
 			case tsCheckmate:
-				sprintf(termMessage, "%s wins: Checkmate", chessGetPlayer(g) == pcWhite ? "Black" : "White");
+				sprintf(termMessage, "%s wins: King captured", chessGetPlayer(g) == pcWhite ? "Black" : "White");
 				break;
 			case tsDrawStalemate:
 				strcpy(termMessage, "Draw: Stalemate");
@@ -779,7 +804,7 @@ void updateWindowTitle()
 		}
 		sprintf(message, "%s   %s", termMessage, fen);
 	}
-	else if (chessGetRepetitions(g) != 1)
+	else if (!showFog && chessGetRepetitions(g) != 1)
 	{
 		sprintf(message, "Repetitions: %d   %s", chessGetRepetitions(g), fen);
 	}
@@ -788,7 +813,8 @@ void updateWindowTitle()
 		strcpy(message, fen);
 	}
 	sfRenderWindow_setTitle(window, message);
-	free(fen);
+	if (!showFog)
+		free(fen);
 	free(message);
 }
 
@@ -814,6 +840,35 @@ void updateGameState()
 		if (autoFlip)
 			isFlipped = chessGetPlayer(g) == pcBlack;
 	}
+
+	updateFog();
+}
+
+void updateFog()
+{
+	if (fogVisibleSet)
+		sqSetFree(fogVisibleSet);
+	fogVisibleSet = sqSetCreateCustomDimensions(boardWidth, boardHeight);
+	board *ourBoard = boardClone(chessGetBoard(g));
+	if (isFlipped == (ourBoard->currentPlayer == pcWhite))
+	{
+		ourBoard->currentPlayer = (isFlipped ? pcBlack : pcWhite);
+		ourBoard->epTarget = SQ_INVALID;
+	}
+	moveList *ourLegals = boardGenerateMoves(ourBoard);
+	for (int file = 1; file <= boardWidth; file++)
+	{
+		for (int rank = 1; rank <= boardHeight; rank++)
+		{
+			sq s = sqI(file, rank);
+			if (pieceGetColor(chessGetPiece(g, s)) == ourBoard->currentPlayer)
+				sqSetSet(fogVisibleSet, s, 1);
+		}
+	}
+	for (moveListNode *n = ourLegals->head; n; n = n->next)
+		sqSetSet(fogVisibleSet, n->move.to, 1);
+	moveListFree(ourLegals);
+	boardFree(ourBoard);
 }
 
 // Returns the squares that can be reached by a legal move from the given starting square

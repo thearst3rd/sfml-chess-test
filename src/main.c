@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	uciCreate("stockfish");
+	uciCreate(execName);
 
 	// Create the window
 	sfVideoMode mode = {720, 720, 32};

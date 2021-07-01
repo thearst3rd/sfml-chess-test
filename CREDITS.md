@@ -22,7 +22,10 @@ capture.wav | [Terry Hearst](https://github.com/thearst3rd) | [CC0] (Public Doma
 Piece set | Author | License | Notes
 --- | --- | --- | ---
 [cburnett](https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces) | [Colin M.L. Burnett](https://en.wikipedia.org/wiki/User:Cburnett) | BSD License | I used the 240x240 rendered PNGs available on the Wikimedia link. The pieces are also licensed under GFDL and GPL... I hope that my attribution is sufficient!
+[alpha](http://www.enpassant.dk/chess/fontimg/alpha.htm) | Eric Bentzen | Free for personal non commercial use (see [webpage](http://www.enpassant.dk/chess/fonteng.htm)) | I downloaded this font as svg files from [the lila repository](https://github.com/ornicar/lila/tree/master/public/piece/alpha), then used Inkscape to render them into 240x240 png files.
+[tatiana](https://github.com/ornicar/lila/tree/master/public/piece/tatiana) | sadsnake1 | [CC BY-NC-SA 4.0] | I used Inkscape to render the svg files into 240x240 png files.
 
 [CC BY-NC 3.0]: https://creativecommons.org/licenses/by-nc/3.0/
 [CC BY 3.0]: https://creativecommons.org/licenses/by/3.0/
+[CC BY-NC-SA 4.0]: https://creativecommons.org/licenses/by-nc-sa/4.0/
 [CC0]: https://creativecommons.org/share-your-work/public-domain/cc0/

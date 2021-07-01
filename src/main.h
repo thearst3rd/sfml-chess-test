@@ -7,7 +7,26 @@
 
 #include "chesslib/piece.h"
 
+typedef struct
+{
+	sfTexture *wP;
+	sfTexture *wN;
+	sfTexture *wB;
+	sfTexture *wR;
+	sfTexture *wQ;
+	sfTexture *wK;
+	sfTexture *bP;
+	sfTexture *bN;
+	sfTexture *bB;
+	sfTexture *bR;
+	sfTexture *bQ;
+	sfTexture *bK;
+} pieceSet;
+
 int main(int argc, char *argv[]);
+
+void loadPieceSet(pieceSet *ps, const char *name);
+void destroyPieceSet(pieceSet *ps);
 
 void calcView();
 void drawPiece(piece p, sfVector2f coords);

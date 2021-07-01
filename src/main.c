@@ -41,9 +41,11 @@ sqSet legalMoveSet;
 sfCircleShape *legalMoveIndicator;
 sfCircleShape *legalCaptureIndicator;
 
-pieceSet cburnett;
+pieceSet psCburnett;
+pieceSet psAlpha;
+pieceSet psTatiana;
 
-pieceSet *currentPieceSet = &cburnett;
+pieceSet *currentPieceSet = &psTatiana;
 
 sfSprite *sprPiece;
 
@@ -141,11 +143,13 @@ int main(int argc, char *argv[])
 	sfRenderWindow_setVerticalSyncEnabled(window, sfTrue);
 
 	// Load textures
-	loadPieceSet(&cburnett, "cburnett");
+	loadPieceSet(&psCburnett, "cburnett");
+	loadPieceSet(&psTatiana, "tatiana");
+	loadPieceSet(&psAlpha, "alpha");
 
 	// Set window icon
-	sfVector2u texSize = sfTexture_getSize(cburnett.wN);
-	sfImage *iconImage = sfTexture_copyToImage(cburnett.wN);
+	sfVector2u texSize = sfTexture_getSize(psTatiana.wN);
+	sfImage *iconImage = sfTexture_copyToImage(psTatiana.wN);
 	sfRenderWindow_setIcon(window, texSize.x, texSize.y, sfImage_getPixelsPtr(iconImage));
 
 	// Create piece sprite. This will be reused for each piece drawing
@@ -413,6 +417,15 @@ int main(int argc, char *argv[])
 						showLegals = !showLegals;
 						break;
 
+					case sfKeyP:
+						if (currentPieceSet == &psCburnett)
+							currentPieceSet = &psAlpha;
+						else if (currentPieceSet == &psAlpha)
+							currentPieceSet = &psTatiana;
+						else
+							currentPieceSet = &psCburnett;
+						break;
+
 					default:
 						break;
 				}
@@ -482,7 +495,9 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < 64; i++)
 		sfRectangleShape_destroy(boardSquares[i]);
 
-	destroyPieceSet(&cburnett);
+	destroyPieceSet(&psCburnett);
+	destroyPieceSet(&psAlpha);
+	destroyPieceSet(&psTatiana);
 
 	sfRectangleShape_destroy(highlightSquare);
 	sfCircleShape_destroy(checkIndicator);

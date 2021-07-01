@@ -13,19 +13,16 @@ The other two sounds, I actually recorded myself! Feel free to use them, though 
 
 Filename | Author | License
 --- | --- | ---
-move.wav | [Terry Hearst](https://github.com/thearst3rd) | [CC BY 3.0]
-capture.wav | [Terry Hearst](https://github.com/thearst3rd) | [CC BY 3.0]
+move.wav | [Terry Hearst](https://github.com/thearst3rd) | [CC0] (Public Domain)
+capture.wav | [Terry Hearst](https://github.com/thearst3rd) | [CC0] (Public Domain)
 
 
 ## Images
 
-Chess pieces are created by [Colin M.L. Burnett](https://en.wikipedia.org/wiki/User:Cburnett) and are licensed under the BSD License. Pieces can be found here:
-
-https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces
-
-Note: I used the 240x240 rendered PNGs available on the above Wikimedia link
-
-Note 2: The pieces are also licensed under GFDL and GPL... I hope that my attribution is sufficient!
+Piece set | Author | License | Notes
+--- | --- | --- | ---
+[cburnett](https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces) | [Colin M.L. Burnett](https://en.wikipedia.org/wiki/User:Cburnett) | BSD License | I used the 240x240 rendered PNGs available on the Wikimedia link. The pieces are also licensed under GFDL and GPL... I hope that my attribution is sufficient!
 
 [CC BY-NC 3.0]: https://creativecommons.org/licenses/by-nc/3.0/
 [CC BY 3.0]: https://creativecommons.org/licenses/by/3.0/
+[CC0]: https://creativecommons.org/share-your-work/public-domain/cc0/

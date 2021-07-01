@@ -40,21 +40,9 @@ sqSet legalMoveSet;
 sfCircleShape *legalMoveIndicator;
 sfCircleShape *legalCaptureIndicator;
 
-sfTexture *texWKing;
-sfTexture *texWQueen;
-sfTexture *texWRook;
-sfTexture *texWBishop;
-sfTexture *texWKnight;
-sfTexture *texWPawn;
+pieceSet cburnett;
 
-sfTexture *texBKing;
-sfTexture *texBQueen;
-sfTexture *texBRook;
-sfTexture *texBBishop;
-sfTexture *texBKnight;
-sfTexture *texBPawn;
-
-sfTexture *texPieces[12];
+pieceSet *currentPieceSet = &cburnett;
 
 sfSprite *sprPiece;
 
@@ -124,31 +112,12 @@ int main(int argc, char *argv[])
 	sfRenderWindow_setVerticalSyncEnabled(window, sfTrue);
 
 	// Load textures
-	texPieces[ 0] = texWKing   = sfTexture_createFromFile("img/wK.png", NULL);
-	texPieces[ 1] = texWQueen  = sfTexture_createFromFile("img/wQ.png", NULL);
-	texPieces[ 2] = texWRook   = sfTexture_createFromFile("img/wR.png", NULL);
-	texPieces[ 3] = texWBishop = sfTexture_createFromFile("img/wB.png", NULL);
-	texPieces[ 4] = texWKnight = sfTexture_createFromFile("img/wN.png", NULL);
-	texPieces[ 5] = texWPawn   = sfTexture_createFromFile("img/wP.png", NULL);
-
-	texPieces[ 6] = texBKing   = sfTexture_createFromFile("img/bK.png", NULL);
-	texPieces[ 7] = texBQueen  = sfTexture_createFromFile("img/bQ.png", NULL);
-	texPieces[ 8] = texBRook   = sfTexture_createFromFile("img/bR.png", NULL);
-	texPieces[ 9] = texBBishop = sfTexture_createFromFile("img/bB.png", NULL);
-	texPieces[10] = texBKnight = sfTexture_createFromFile("img/bN.png", NULL);
-	texPieces[11] = texBPawn   = sfTexture_createFromFile("img/bP.png", NULL);
+	loadPieceSet(&cburnett, "cburnett");
 
 	// Set window icon
-	sfVector2u texSize = sfTexture_getSize(texBQueen);
-	sfImage *iconImage = sfTexture_copyToImage(texBQueen);
+	sfVector2u texSize = sfTexture_getSize(cburnett.wN);
+	sfImage *iconImage = sfTexture_copyToImage(cburnett.wN);
 	sfRenderWindow_setIcon(window, texSize.x, texSize.y, sfImage_getPixelsPtr(iconImage));
-
-	// Set texture scaling
-	for (int i = 0; i < 12; i++)
-	{
-		sfTexture_setSmooth(texPieces[i], sfTrue);
-		sfTexture_generateMipmap(texPieces[i]);
-	}
 
 	// Create piece sprite. This will be reused for each piece drawing
 	sprPiece = sfSprite_create();
@@ -513,8 +482,7 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < 64; i++)
 		sfRectangleShape_destroy(boardSquares[i]);
 
-	for (int i = 0; i < 12; i++)
-		sfTexture_destroy(texPieces[i]);
+	destroyPieceSet(&cburnett);
 
 	sfRectangleShape_destroy(highlightSquare);
 	sfCircleShape_destroy(checkIndicator);
@@ -534,6 +502,54 @@ int main(int argc, char *argv[])
 	sfSound_destroy(sndTerminal);
 
 	return 0;
+}
+
+void loadPieceSet(pieceSet *ps, const char *name)
+{
+	char *filename = (char *) malloc(strlen(name) + 12); // img/NAME/xX.png
+
+	sprintf(filename, "img/%s/wP.png", name);
+	ps->wP = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/wN.png", name);
+	ps->wN = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/wB.png", name);
+	ps->wB = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/wR.png", name);
+	ps->wR = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/wQ.png", name);
+	ps->wQ = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/wK.png", name);
+	ps->wK = sfTexture_createFromFile(filename, NULL);
+
+	sprintf(filename, "img/%s/bP.png", name);
+	ps->bP = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/bN.png", name);
+	ps->bN = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/bB.png", name);
+	ps->bB = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/bR.png", name);
+	ps->bR = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/bQ.png", name);
+	ps->bQ = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/bK.png", name);
+	ps->bK = sfTexture_createFromFile(filename, NULL);
+
+	free(filename);
+
+	// Set texture scaling
+	sfTexture **pieceSetTextureArray = (sfTexture **) ps;
+	for (int i = 0; i < 12; i++)
+	{
+		sfTexture_setSmooth(pieceSetTextureArray[i], sfTrue);
+		sfTexture_generateMipmap(pieceSetTextureArray[i]);
+	}
+}
+
+void destroyPieceSet(pieceSet *ps)
+{
+	sfTexture **pieceSetTextureArray = (sfTexture **) ps;
+	for (int i = 0; i < 12; i++)
+		sfTexture_destroy(pieceSetTextureArray[i]);
 }
 
 void calcView()
@@ -627,29 +643,29 @@ sfTexture *getPieceTex(piece p)
 	switch (p)
 	{
 		case pWPawn:
-			return texWPawn;
+			return currentPieceSet->wP;
 		case pWKnight:
-			return texWKnight;
+			return currentPieceSet->wN;
 		case pWBishop:
-			return texWBishop;
+			return currentPieceSet->wB;
 		case pWRook:
-			return texWRook;
+			return currentPieceSet->wR;
 		case pWQueen:
-			return texWQueen;
+			return currentPieceSet->wQ;
 		case pWKing:
-			return texWKing;
+			return currentPieceSet->wK;
 		case pBPawn:
-			return texBPawn;
+			return currentPieceSet->bP;
 		case pBKnight:
-			return texBKnight;
+			return currentPieceSet->bN;
 		case pBBishop:
-			return texBBishop;
+			return currentPieceSet->bB;
 		case pBRook:
-			return texBRook;
+			return currentPieceSet->bR;
 		case pBQueen:
-			return texBQueen;
+			return currentPieceSet->bQ;
 		case pBKing:
-			return texBKing;
+			return currentPieceSet->bK;
 		default:
 			return NULL;
 	}

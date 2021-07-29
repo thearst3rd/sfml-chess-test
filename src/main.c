@@ -82,6 +82,9 @@ int main(int argc, char *argv[])
 	const char *execName = "stockfish";
 	initialFen = INITIAL_FEN;
 
+	const char **options = NULL;
+	size_t optionsSize = 0;
+
 	// Parse command line input
 	for (int i = 1; i < argc; i++)
 	{
@@ -116,9 +119,29 @@ int main(int argc, char *argv[])
 			}
 			execName = argv[i];
 		}
+		else if ((strcmp(argv[i], "--setoption") == 0) || (strcmp(argv[i], "-s") == 0))
+		{
+			i += 2;
+			if (i >= argc)
+			{
+				fprintf(stderr, "ERROR: You must supply an option and value after the %s argument", argv[i - 2]);
+				return 1;
+			}
+			optionsSize++;
+			options = (const char **) realloc(options, 2 * optionsSize * sizeof(const char *));
+			options[2 * optionsSize - 2] = argv[i - 1];
+			options[2 * optionsSize - 1] = argv[i];
+		}
 	}
 
 	uciCreate(execName);
+
+	for (size_t i = 0; i < optionsSize; i++)
+	{
+		const char *name = options[2 * i];
+		const char *value = options[2 * i + 1];
+		uciSetOption(name, value);
+	}
 
 	// Create the window
 	sfVideoMode mode = {720, 720, 32};
@@ -521,6 +544,8 @@ int main(int argc, char *argv[])
 	sfMutex_destroy(randMutex);
 
 	uciFree();
+	if (options)
+		free(options);
 
 	return 0;
 }

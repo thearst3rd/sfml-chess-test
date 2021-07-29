@@ -89,6 +89,7 @@ void uciCreate(const char *execName)
 				}
 			}
 		}
+		free(line);
 	}
 	else 	// CHILD PROCESS
 	{
@@ -132,6 +133,12 @@ void uciSetLimit(const char *newLimit)
 		uciLimit = strdup(newLimit);
 	else
 		uciLimit = NULL;
+}
+
+void uciSetOption(const char *name, const char *value)
+{
+	fprintf(engineWrite, "setoption name %s value %s\n", name, value);
+	fflush(engineWrite);
 }
 
 // Creates a concated string of the list of UCI moves. Must be freed
@@ -191,7 +198,7 @@ move uciGetMove(chess *game)
 	if (uciLimit)
 		fprintf(engineWrite, "go %s\n", uciLimit);
 	else
-		fprintf(engineWrite, "go nodes 10000\n");
+		fprintf(engineWrite, "go depth 15\n");
 
 	fflush(engineWrite);
 
@@ -220,4 +227,5 @@ move uciGetMove(chess *game)
 			}
 		}
 	}
+	free(line);
 }

@@ -82,7 +82,7 @@ sfMutex *randMutex;
 
 int main(int argc, char *argv[])
 {
-	const char *execName = "stockfish";
+	const char *execName = "fairy-stockfish";
 	initialFen = INITIAL_FEN;
 
 	const char **options = NULL;
@@ -170,6 +170,7 @@ int main(int argc, char *argv[])
 		{
 			// Treat last argument as FEN
 			initialFen = argv[i];
+			uciSetInitialFen(initialFen);
 		}
 	}
 

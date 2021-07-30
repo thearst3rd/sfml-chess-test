@@ -158,7 +158,7 @@ char *uciCreateMoveString(chess *game)
 		return moveGetUci(history->head->move);
 	}
 
-	buf = (char *) malloc((6 * history->size) + 1);
+	buf = (char *) malloc((8 * history->size) + 1);
 
 	char *ptr = buf;
 
@@ -215,14 +215,10 @@ move uciGetMove(chess *game)
 		{
 			if (len > 8 && (strncmp(line, "bestmove ", 9) == 0))
 			{
-				char moveStr[6];
-				strncpy(moveStr, line + 9, 5);
-				moveStr[5] = 0;
-				if ((moveStr[4] != 'q') && (moveStr[4] != 'n') && (moveStr[4] != 'r') && (moveStr[4] != 'b'))
-					moveStr[4] = 0;
-
+				move m = moveFromUci(line + 9);
+				char *moveStr = moveGetUci(m);
 				printf("Best move received: %s\n", moveStr);
-				move m = moveFromUci(moveStr);
+				free(moveStr);
 				return m;
 			}
 		}

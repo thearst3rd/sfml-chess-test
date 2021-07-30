@@ -22,7 +22,7 @@
 // Define resources
 sfRenderWindow *window;
 
-sfRectangleShape *boardSquares[64];
+sfRectangleShape **boardSquares;
 sfColor boardBlackColor;
 sfColor boardWhiteColor;
 sfColor boardHighlightColor;
@@ -37,7 +37,7 @@ sq highlight2Sq;
 
 sfCircleShape *checkIndicator;
 
-sqSet legalMoveSet;
+sqSet *legalMoveSet = NULL;
 sfCircleShape *legalMoveIndicator;
 sfCircleShape *legalCaptureIndicator;
 
@@ -67,6 +67,10 @@ int doRandomMoves = 0;
 int showLegals = 1;
 
 const char *initialFen;
+int boardWidth = 8;
+int boardHeight = 8;
+#define NUM_SQUARES (boardWidth * boardHeight)
+
 chess *g = NULL;
 
 // Handle AI multithreading
@@ -131,6 +135,42 @@ int main(int argc, char *argv[])
 			options[2 * optionsSize - 2] = argv[i - 1];
 			options[2 * optionsSize - 1] = argv[i];
 		}
+		else if ((strcmp(argv[i], "--width") == 0) || (strcmp(argv[i], "-w") == 0))
+		{
+			i++;
+			if (i >= argc)
+			{
+				fprintf(stderr, "ERROR: Expected width after \"%s\"", argv[i - 1]);
+				return 1;
+			}
+			boardWidth = atoi(argv[i]);
+		}
+		else if ((strcmp(argv[i], "--height") == 0) || (strcmp(argv[i], "-h") == 0))
+		{
+			i++;
+			if (i >= argc)
+			{
+				fprintf(stderr, "ERROR: Expected height after \"%s\"", argv[i - 1]);
+				return 1;
+			}
+			boardHeight = atoi(argv[i]);
+		}
+		else if ((strcmp(argv[i], "--dimensions") == 0) || (strcmp(argv[i], "-d") == 0))
+		{
+			i += 2;
+			if (i >= argc)
+			{
+				fprintf(stderr, "ERROR: Expected width, height after \"%s\"", argv[i - 2]);
+				return 1;
+			}
+			boardWidth = atoi(argv[i - 1]);
+			boardHeight = atoi(argv[i]);
+		}
+		else if (i == (argc - 1))
+		{
+			// Treat last argument as FEN
+			initialFen = argv[i];
+		}
 	}
 
 	uciCreate(execName);
@@ -190,15 +230,19 @@ int main(int argc, char *argv[])
 	legalMoveColor = sfColor_fromRGBA(0, 0, 0, 100);
 
 	// Create board squares
-	for (int i = 0; i < 64; i++)
+	boardSquares = (sfRectangleShape **) malloc(NUM_SQUARES * sizeof(sfRectangleShape *));
+	for (int i = 0; i < NUM_SQUARES; i++)
 	{
 		sfRectangleShape *s = sfRectangleShape_create();
 
 		sfRectangleShape_setSize(s, (sfVector2f) {SQUARE_SIZE, SQUARE_SIZE});
-		sfRectangleShape_setPosition(s, (sfVector2f) {(float) (i % 8) * SQUARE_SIZE, floor(i / 8) * SQUARE_SIZE});
+		sfRectangleShape_setPosition(s, (sfVector2f) {(float) (i % boardWidth) * SQUARE_SIZE, floor(i / boardWidth)
+				* SQUARE_SIZE});
 
-		int isBlack = (i + (int) floor(i / 8)) % 2;
-		sfRectangleShape_setFillColor(s, isBlack ? boardBlackColor : boardWhiteColor);
+		int file = (i % boardWidth) + 1;
+		int rank = boardHeight - floor(i / boardWidth);
+		int isDark = sqIsDark((sq) {file, rank});
+		sfRectangleShape_setFillColor(s, isDark ? boardBlackColor : boardWhiteColor);
 
 		boardSquares[i] = s;
 	}
@@ -288,6 +332,8 @@ int main(int argc, char *argv[])
 								draggingSq = s;
 								newDraggingPiece = pEmpty;
 
+								if (legalMoveSet)
+									sqSetFree(legalMoveSet);
 								legalMoveSet = getLegalSquareSet(s);
 							}
 						}
@@ -306,7 +352,7 @@ int main(int argc, char *argv[])
 						if (getMouseSquare(event.mouseButton.x, event.mouseButton.y, &s))
 						{
 							move m = moveSq(draggingSq, s);
-							if (pieceGetType(chessGetPiece(g, draggingSq)) == ptPawn && (s.rank == 1 || s.rank == 8))
+							if (pieceGetType(chessGetPiece(g, draggingSq)) == ptPawn && (s.rank == 1 || s.rank == boardHeight))
 								m.promotion = ptQueen;
 
 							uint8_t isCapture = (chessGetPiece(g, s) != pEmpty) ||
@@ -456,15 +502,19 @@ int main(int argc, char *argv[])
 		sfRenderWindow_clear(window, backgroundColor);
 
 		// Draw the board
-		for (int i = 0; i < 64; i++)
+		for (int i = 0; i < NUM_SQUARES; i++)
 		{
 			sq s;
-			s.file = (i % 8) + 1;
-			s.rank = 8 - floor(i / 8);
+			s.file = (i % boardWidth) + 1;
+			s.rank = boardHeight - floor(i / boardWidth);
 
-			int index = isFlipped ? 63 - i : i;
+			int index = isFlipped ? (NUM_SQUARES - 1) - i : i;
 
-			sfRenderWindow_drawRectangleShape(window, boardSquares[index], NULL);
+			piece p = chessGetPiece(g, s);
+			pieceType pt = pieceGetType(p);
+
+			if (p != pBlocker)
+				sfRenderWindow_drawRectangleShape(window, boardSquares[index], NULL);
 
 			if (showHighlighting && (sqEq(s, highlight1Sq) || sqEq(s, highlight2Sq)))
 			{
@@ -472,11 +522,8 @@ int main(int argc, char *argv[])
 				sfRenderWindow_drawRectangleShape(window, highlightSquare, NULL);
 			}
 
-			piece p = chessGetPiece(g, s);
-			if (p)
+			if (p != pEmpty && p != pBlocker)
 			{
-				pieceType pt = pieceGetType(p);
-
 				if (pt == ptKing && chessIsSquareAttacked(g, s))
 					drawCircleShape(checkIndicator, s);
 				drawBoardPiece(p, s);
@@ -484,7 +531,7 @@ int main(int argc, char *argv[])
 
 			if (showLegals && isDragging)
 			{
-				if (sqSetGet(&legalMoveSet, s))
+				if (sqSetGet(legalMoveSet, s))
 					drawCircleShape(p ? legalCaptureIndicator : legalMoveIndicator, s);
 			}
 		}
@@ -512,8 +559,9 @@ int main(int argc, char *argv[])
 	// Cleanup and exit
 	sfRenderWindow_destroy(window);
 
-	for (int i = 0; i < 64; i++)
+	for (int i = 0; i < NUM_SQUARES; i++)
 		sfRectangleShape_destroy(boardSquares[i]);
+	free(boardSquares);
 
 	destroyPieceSet(&psCburnett);
 	destroyPieceSet(&psAlpha);
@@ -603,8 +651,8 @@ void calcView()
 
 	float x = 0.0f;
 	float y = 0.0f;
-	float w = SQUARE_SIZE * 8.0f;
-	float h = SQUARE_SIZE * 8.0f;
+	float w = SQUARE_SIZE * ((float) boardWidth);
+	float h = SQUARE_SIZE * ((float) boardHeight);
 
 	float ratio = (w / h);
 	float windowRatio = (width / height);
@@ -642,8 +690,8 @@ void drawBoardPiece(piece p, sq s)
 
 	if (isFlipped)
 	{
-		coordsFile = 9 - s.file;
-		coordsRank = 9 - s.rank;
+		coordsFile = (boardWidth + 1) - s.file;
+		coordsRank = (boardHeight + 1) - s.rank;
 	}
 	else
 	{
@@ -651,8 +699,8 @@ void drawBoardPiece(piece p, sq s)
 		coordsRank = s.rank;
 	}
 
-	sfVector2f coords = (sfVector2f) {((float) coordsFile - 0.5) * SQUARE_SIZE,
-			(8.5 - (float) coordsRank) * SQUARE_SIZE};
+	sfVector2f coords = (sfVector2f) {((float) coordsFile - 0.5f) * SQUARE_SIZE,
+			((((float) boardHeight) + 0.5f) - (float) coordsRank) * SQUARE_SIZE};
 
 	if (isDragging && sqEq(draggingSq, s))
 	{
@@ -668,16 +716,17 @@ void drawBoardPiece(piece p, sq s)
 
 void drawCircleShape(sfCircleShape *shape, sq s)
 {
-	uint8_t file = s.file;
-	uint8_t rank = s.rank;
+	int file = s.file;
+	int rank = s.rank;
 
 	if (isFlipped)
 	{
-		file = 9 - file;
-		rank = 9 - rank;
+		file = (boardWidth + 1) - file;
+		rank = (boardHeight + 1) - rank;
 	}
 
-	sfCircleShape_setPosition(shape, (sfVector2f) {((float) file - 0.5) * SQUARE_SIZE, (8.5 - (float) rank) * SQUARE_SIZE});
+	sfCircleShape_setPosition(shape, (sfVector2f) {((float) file - 0.5f) * SQUARE_SIZE,
+			((((float) boardHeight) + 0.5f) - (float) rank) * SQUARE_SIZE});
 	sfRenderWindow_drawCircleShape(window, shape, NULL);
 }
 
@@ -722,16 +771,16 @@ int getMouseSquare(int mouseX, int mouseY, sq *s)
 	coords.x /= SQUARE_SIZE;
 	coords.y /= SQUARE_SIZE;
 
-	if (coords.x < 0.0f || coords.x >= 8.0f || coords.y < 0.0f || coords.y >= 8.0f)
+	if (coords.x < 0.0f || coords.x >= (float) boardWidth || coords.y < 0.0f || coords.y >= (float) boardHeight)
 		return 0;
 
 	s->file = 1 + (int) floor(coords.x);
-	s->rank = 8 - (int) floor(coords.y);
+	s->rank = boardHeight - (int) floor(coords.y);
 
 	if (isFlipped)
 	{
-		s->file = 9 - s->file;
-		s->rank = 9 - s->rank;
+		s->file = (boardWidth + 1) - s->file;
+		s->rank = (boardHeight + 1) - s->rank;
 	}
 
 	return 1;
@@ -742,15 +791,22 @@ void initChess()
 	if (g)
 		chessFree(g);
 
-	g = chessCreateFen(initialFen);
+	g = chessCreateCustomDimensions(boardWidth, boardHeight, initialFen);
+
+	if (!g)
+	{
+		fprintf(stderr, "Unable to create chess game");
+		exit(1);
+	}
 
 	updateGameState();
 }
 
 void updateWindowTitle()
 {
-	char message[155];
 	char *fen = chessGetFen(g);
+	size_t fenLen = strlen(fen);
+	char *message = malloc(fenLen + 50);	// Upper bound on title length
 	if (chessGetTerminalState(g) != tsOngoing)
 	{
 		char termMessage[40];
@@ -792,6 +848,7 @@ void updateWindowTitle()
 	}
 	sfRenderWindow_setTitle(window, message);
 	free(fen);
+	free(message);
 }
 
 void updateGameState()
@@ -819,15 +876,15 @@ void updateGameState()
 }
 
 // Returns the squares that can be reached by a legal move from the given starting square
-sqSet getLegalSquareSet(sq s)
+sqSet *getLegalSquareSet(sq s)
 {
-	sqSet ss = 0;
+	sqSet *ss = sqSetCreateCustomDimensions(boardWidth, boardHeight);
 
 	for (moveListNode *n = chessGetLegalMoves(g)->head; n; n = n->next)
 	{
 		move m = n->move;
 		if (sqEq(m.from, s))
-			sqSetSet(&ss, m.to, 1);
+			sqSetSet(ss, m.to, 1);
 	}
 
 	return ss;

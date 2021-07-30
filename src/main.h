@@ -48,7 +48,7 @@ sqSet getLegalSquareSet(sq s);
 
 // playAiMove spawns a thread to play the move chosen by aiGetMove
 move aiGetMove();
-void playAiMove(sfTime delay);
+void playAiMove();
 void playAiMoveThreadFunc(void *userData);
 
 int isAiPlaying();

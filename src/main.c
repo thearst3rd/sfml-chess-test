@@ -72,7 +72,6 @@ chess *g = NULL;
 // Handle AI multithreading
 int aiPlayingValue = 0;
 sfMutex *aiPlayingMutex;
-sfTime delayTime;
 sfThread *aiThread;
 
 sfMutex *randMutex;
@@ -249,9 +248,7 @@ int main(int argc, char *argv[])
 	sndTerminal = sfSound_create();
 	sfSound_setBuffer(sndTerminal, sbTerminal);
 
-	// Handle AI threading
-	delayTime = sfTime_Zero;
-	aiThread = sfThread_create(&playAiMoveThreadFunc, &delayTime);
+	aiThread = sfThread_create(&playAiMoveThreadFunc, NULL);
 	aiPlayingMutex = sfMutex_create();
 
 	// Set random seed
@@ -935,9 +932,6 @@ void playAiMoveThreadFunc(void *userData)
 {
 	setAiPlaying(1);
 
-	sfTime delay = *((sfTime *) userData);
-	sfSleep(delay);
-
 	move m = aiGetMove();
 
 	pieceType ptFrom = pieceGetType(chessGetPiece(g, m.from));
@@ -960,10 +954,10 @@ void playAiMoveThreadFunc(void *userData)
 	updateGameState();
 }
 
-void playAiMove(sfTime delay)
+void playAiMove()
 {
-	delayTime = delay;
-	sfThread_launch(aiThread);
+	if (!isAiPlaying())
+		sfThread_launch(aiThread);
 }
 
 int isAiPlaying()

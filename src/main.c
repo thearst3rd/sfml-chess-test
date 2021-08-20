@@ -44,7 +44,7 @@ pieceSet psCburnett;
 pieceSet psAlpha;
 pieceSet psTatiana;
 
-pieceSet *currentPieceSet = &psTatiana;
+pieceSet *currentPieceSet = &psCburnett;
 
 sfSprite *sprPiece;
 
@@ -584,6 +584,17 @@ void loadPieceSet(pieceSet *ps, const char *name)
 	sprintf(filename, "img/%s/wK.png", name);
 	ps->wK = sfTexture_createFromFile(filename, NULL);
 
+	sprintf(filename, "img/%s/wW.png", name);
+	ps->wW = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/wM.png", name);
+	ps->wM = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/wH.png", name);
+	ps->wH = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/wC.png", name);
+	ps->wC = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/wA.png", name);
+	ps->wA = sfTexture_createFromFile(filename, NULL);
+
 	sprintf(filename, "img/%s/bP.png", name);
 	ps->bP = sfTexture_createFromFile(filename, NULL);
 	sprintf(filename, "img/%s/bN.png", name);
@@ -597,11 +608,22 @@ void loadPieceSet(pieceSet *ps, const char *name)
 	sprintf(filename, "img/%s/bK.png", name);
 	ps->bK = sfTexture_createFromFile(filename, NULL);
 
+	sprintf(filename, "img/%s/bW.png", name);
+	ps->bW = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/bM.png", name);
+	ps->bM = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/bH.png", name);
+	ps->bH = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/bC.png", name);
+	ps->bC = sfTexture_createFromFile(filename, NULL);
+	sprintf(filename, "img/%s/bA.png", name);
+	ps->bA = sfTexture_createFromFile(filename, NULL);
+
 	free(filename);
 
 	// Set texture scaling
 	sfTexture **pieceSetTextureArray = (sfTexture **) ps;
-	for (int i = 0; i < 12; i++)
+	for (int i = 0; i < NUM_PIECES; i++)
 	{
 		sfTexture_setSmooth(pieceSetTextureArray[i], sfTrue);
 		sfTexture_generateMipmap(pieceSetTextureArray[i]);
@@ -718,6 +740,16 @@ sfTexture *getPieceTex(piece p)
 			return currentPieceSet->wQ;
 		case pWKing:
 			return currentPieceSet->wK;
+		case pWWazir:
+			return currentPieceSet->wW;
+		case pWMann:
+			return currentPieceSet->wM;
+		case pWArchbishop:
+			return currentPieceSet->wH;
+		case pWChancellor:
+			return currentPieceSet->wC;
+		case pWAmazon:
+			return currentPieceSet->wA;
 		case pBPawn:
 			return currentPieceSet->bP;
 		case pBKnight:
@@ -730,6 +762,16 @@ sfTexture *getPieceTex(piece p)
 			return currentPieceSet->bQ;
 		case pBKing:
 			return currentPieceSet->bK;
+		case pBWazir:
+			return currentPieceSet->bW;
+		case pBMann:
+			return currentPieceSet->bM;
+		case pBArchbishop:
+			return currentPieceSet->bH;
+		case pBChancellor:
+			return currentPieceSet->bC;
+		case pBAmazon:
+			return currentPieceSet->bA;
 		default:
 			return NULL;
 	}

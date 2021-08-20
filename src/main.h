@@ -15,12 +15,22 @@ typedef struct
 	sfTexture *wR;
 	sfTexture *wQ;
 	sfTexture *wK;
+	sfTexture *wW;
+	sfTexture *wM;
+	sfTexture *wH;
+	sfTexture *wC;
+	sfTexture *wA;
 	sfTexture *bP;
 	sfTexture *bN;
 	sfTexture *bB;
 	sfTexture *bR;
 	sfTexture *bQ;
 	sfTexture *bK;
+	sfTexture *bW;
+	sfTexture *bM;
+	sfTexture *bH;
+	sfTexture *bC;
+	sfTexture *bA;
 } pieceSet;
 
 int main(int argc, char *argv[]);

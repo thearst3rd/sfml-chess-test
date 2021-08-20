@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Create the window
-	sfVideoMode mode = {720, 720, 32};
+	sfVideoMode mode = {90 * boardWidth, 90 * boardHeight, 32};
 	// Default values taken from https://www.sfml-dev.org/documentation/2.5.1/structsf_1_1ContextSettings.php
 	sfContextSettings contextSettings = (sfContextSettings)
 	{
@@ -296,12 +296,20 @@ int main(int argc, char *argv[])
 						{
 							move m = moveSq(draggingSq, s);
 							if (pieceGetType(chessGetPiece(g, draggingSq)) == ptPawn && (s.rank == 1 || s.rank == boardHeight))
-								m.promotion = ptQueen;
+								m.promotion = ptAmazon;
 
 							uint8_t isCapture = (chessGetPiece(g, s) != pEmpty) ||
 									(pieceGetType(chessGetPiece(g, draggingSq)) == ptPawn && (s.file != draggingSq.file));
 
-							if (!chessPlayMove(g, m))
+							// Simple fallback system - will try to promote to amazon if possible, then queen next
+							uint8_t success = !chessPlayMove(g, m);
+							if (!success && m.promotion != ptEmpty)
+							{
+								m.promotion = ptQueen;
+								success = !chessPlayMove(g, m);
+							}
+
+							if (success)
 							{
 								uint8_t isCheck = chessIsInCheck(g) && (chessGetTerminalState(g) == tsOngoing);
 
